@@ -15,6 +15,7 @@ int main(int argc, char* argv[]) {
 
     pid_t child;
     long orig_rax;
+    long rdi, rsi, rdx, r10, r8, r9;  // Registers for syscall arguments
     int status;
 
     child = fork();
@@ -33,8 +34,16 @@ int main(int argc, char* argv[]) {
         while (WIFSTOPPED(status)) {
             orig_rax = ptrace(PTRACE_PEEKUSER, child, 8 * ORIG_RAX, NULL);
 
-            if (orig_rax != -1) {
-                printf("Syscall %ld\n", orig_rax);
+        if (orig_rax != -1) {
+                rdi = ptrace(PTRACE_PEEKUSER, child, 8 * RDI, NULL);
+                rsi = ptrace(PTRACE_PEEKUSER, child, 8 * RSI, NULL);
+                rdx = ptrace(PTRACE_PEEKUSER, child, 8 * RDX, NULL);
+                r10 = ptrace(PTRACE_PEEKUSER, child, 8 * R10, NULL);
+                r8 = ptrace(PTRACE_PEEKUSER, child, 8 * R8, NULL);
+                r9 = ptrace(PTRACE_PEEKUSER, child, 8 * R9, NULL);
+
+                printf("Syscall %ld: rdi=%ld, rsi=%ld, rdx=%ld, r10=%ld, r8=%ld, r9=%ld\n",
+                       orig_rax, rdi, rsi, rdx, r10, r8, r9);
             }
 
             // Continue the child
@@ -52,6 +61,3 @@ int main(int argc, char* argv[]) {
 
     return 0;
 }
-// save return of rand() and BLOCK syscall and give to second run
-// print input args, and syscall returns, write to disk
-// ldpreload and glibc 

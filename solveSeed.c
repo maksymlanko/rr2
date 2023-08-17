@@ -2,19 +2,25 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include <sys/wait.h>
 
 int main() {
+    pid_t pid;
+    int status;
 
-    if(fork() == 0){
+    pid = fork();
+    if(pid == 0){
         sleep(1);
     }
-    printf("This code's PID is %d\n",getpid());
     srand(time(NULL));
 
     for (int i = 0; i < 30; i++) {
         printf("%d ", rand() & 0xf);
     }
     printf("\n");
-    sleep(3);
+
+    if(pid != 0){
+        wait(&status);
+    }
     return 0;
 }

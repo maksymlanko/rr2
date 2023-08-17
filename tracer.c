@@ -27,8 +27,9 @@ int main(int argc, char* argv[]){
         }
         execvp(argv[1], &argv[1]);
     } else if (child > 0){
-        wait(&status);
-        ptrace(PTRACE_SETOPTIONS, child, NULL, PTRACE_SETOPTIONS | PTRACE_O_TRACEFORK | PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACECLONE);
+        child = wait(&status);
+        ptrace(PTRACE_SETOPTIONS, child, NULL, PTRACE_O_TRACEFORK |
+            PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACECLONE);
 
         while (WIFSTOPPED(status)){
             ptrace(PTRACE_GETREGS, child, NULL, &regs);
@@ -42,7 +43,7 @@ int main(int argc, char* argv[]){
                 return 1;
             }
 
-            wait(&status);
+            child = wait(&status);
         }
     } else{
         perror("fork");

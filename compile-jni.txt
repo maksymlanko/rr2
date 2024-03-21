@@ -1,0 +1,9 @@
+gcc -I/usr/lib/jvm/java-21-openjdk/include/ -I/usr/lib/jvm/java-21-openjdk/include/linux/ jni-example.c -o jni -L/usr/lib/jvm/java-21-openjdk/lib/server -ljvm
+
+export LD_LIBRARY_PATH=/usr/lib/jvm/java-21-openjdk/lib/server:$LD_LIBRARY_PATH
+
+-XX:+ReduceSignalUsage //disables Signal Dispatcher thread. E.g. JVM will not handle SIGQUIT to dump threads
+
+-XX:+DisableAttachMechanism
+
+//In theory it is possible to disable even more threads (e.g. Service Thread and VM Periodic Task Thread) but this would require patching JVM.

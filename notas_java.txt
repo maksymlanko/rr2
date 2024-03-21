@@ -1,0 +1,6 @@
+javac HelloWorld.java
+java HelloWorld
+
+java -Xint -XX:+UseSerialGC -XX:+ReduceSignalUsage -XX:+DisableAttachMechanism HelloWorld
+
+https://stackoverflow.com/a/25706865

@@ -14,10 +14,11 @@ public class ReflectionExample {
         }
 
         String methodName = args[0]; // Use the first command-line argument as the method name
-        Scanner scanner = new Scanner(System.in);
-        System.out.println("Enter the name of the method to execute ('dynamicMethod' or 'anotherMethod'):");
-        String methodName = scanner.nextLine(); // Read method name from user input
-
+        
+        //Scanner scanner = new Scanner(System.in);
+        //System.out.println("Enter the name of the method to execute ('dynamicMethod' or 'anotherMethod'):");
+        //String methodName = scanner.nextLine(); // Read method name from user input
+        
         try {
             MyClass obj = new MyClass();
 

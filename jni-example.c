@@ -26,7 +26,8 @@ void callJavaProgram(int argc, char **argv) {
     t = clock() - t; 
     time_taken = ((double)t)/CLOCKS_PER_SEC; // in seconds 
     printf("malloc() took %f seconds to execute \n", time_taken);
-    options[0].optionString = "-Djava.class.path=."; // Path to the java .class file
+    //options[0].optionString = "-Djava.class.path=."; // Path to the java .class file
+    options[0].optionString = "-Djava.class.path=/home/maksym/Documents/tese-rr/rr2";
     vm_args.version = JNI_VERSION_1_6; // Minimum Java version
     vm_args.nOptions = 1;
     vm_args.options = options;

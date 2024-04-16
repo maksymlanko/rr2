@@ -28,7 +28,7 @@ int main(int argc, char* argv[]) {
 
     child = fork();
     if (child == 0){
-        callJavaProgram(argc, argv);
+        //callJavaProgram(argc, argv);
         graal_isolate_t *isolate = NULL;
         graal_isolatethread_t *thread = NULL;
 

@@ -23,9 +23,9 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "initialization error\n");
         return 1;
     }
-    printf("antes\n");
+    //printf("antes\n");
     int result = run_c(thread, argv[1]);
-    printf("Return was %d\n", result);
+    //printf("Return was %d\n", result);
     if (result != 0){
         printf("Failed\n");
         //callJavaProgram(argc, argv);

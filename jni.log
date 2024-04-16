@@ -1,0 +1,525 @@
+execve("./jni", ["./jni"], 0x7fff42a6f030 /* 50 vars */) = 0
+brk(NULL)                               = 0x55b497c10000
+mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fb9fa229000
+access("/etc/ld.so.preload", R_OK)      = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/server/glibc-hwcaps/x86-64-v3/libjvm.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+newfstatat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/server/glibc-hwcaps/x86-64-v3/", 0x7ffe2365ef90, 0) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/server/glibc-hwcaps/x86-64-v2/libjvm.so", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+newfstatat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/server/glibc-hwcaps/x86-64-v2/", 0x7ffe2365ef90, 0) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/server/libjvm.so", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\0\0\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0755, st_size=438712648, ...}) = 0
+mmap(NULL, 21875936, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7fb9f8c00000
+mmap(0x7fb9f8e7d000, 15822848, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x27d000) = 0x7fb9f8e7d000
+mmap(0x7fb9f9d94000, 2027520, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1194000) = 0x7fb9f9d94000
+mmap(0x7fb9f9f83000, 1003520, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1382000) = 0x7fb9f9f83000
+mmap(0x7fb9fa078000, 412896, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fb9fa078000
+close(3)                                = 0
+openat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/server/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "glibc-hwcaps/x86-64-v3/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "glibc-hwcaps/x86-64-v2/libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "libc.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/etc/ld.so.cache", O_RDONLY|O_CLOEXEC) = 3
+fstat(3, {st_mode=S_IFREG|0644, st_size=171307, ...}) = 0
+mmap(NULL, 171307, PROT_READ, MAP_PRIVATE, 3, 0) = 0x7fb9fa1ff000
+close(3)                                = 0
+openat(AT_FDCWD, "/usr/lib/libc.so.6", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\220\236\2\0\0\0\0\0"..., 832) = 832
+pread64(3, "\6\0\0\0\4\0\0\0@\0\0\0\0\0\0\0@\0\0\0\0\0\0\0@\0\0\0\0\0\0\0"..., 784, 64) = 784
+fstat(3, {st_mode=S_IFREG|0755, st_size=1965296, ...}) = 0
+pread64(3, "\6\0\0\0\4\0\0\0@\0\0\0\0\0\0\0@\0\0\0\0\0\0\0@\0\0\0\0\0\0\0"..., 784, 64) = 784
+mmap(NULL, 1989488, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7fb9f8a1a000
+mmap(0x7fb9f8a42000, 1421312, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x28000) = 0x7fb9f8a42000
+mmap(0x7fb9f8b9d000, 348160, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x183000) = 0x7fb9f8b9d000
+mmap(0x7fb9f8bf2000, 24576, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1d7000) = 0x7fb9f8bf2000
+mmap(0x7fb9f8bf8000, 31600, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fb9f8bf8000
+close(3)                                = 0
+openat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/server/libstdc++.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "glibc-hwcaps/x86-64-v3/libstdc++.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "glibc-hwcaps/x86-64-v2/libstdc++.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "libstdc++.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/usr/lib/libstdc++.so.6", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\0\0\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0755, st_size=21512744, ...}) = 0
+mmap(NULL, 2597056, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7fb9f8600000
+mmap(0x7fb9f869c000, 1273856, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x9c000) = 0x7fb9f869c000
+mmap(0x7fb9f87d3000, 614400, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1d3000) = 0x7fb9f87d3000
+mmap(0x7fb9f8869000, 57344, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x269000) = 0x7fb9f8869000
+mmap(0x7fb9f8877000, 12480, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fb9f8877000
+close(3)                                = 0
+openat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/server/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "glibc-hwcaps/x86-64-v3/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "glibc-hwcaps/x86-64-v2/libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "libm.so.6", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/usr/lib/libm.so.6", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\3\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\0\0\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0755, st_size=969008, ...}) = 0
+mmap(NULL, 971048, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7fb9fa111000
+mmap(0x7fb9fa121000, 524288, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x10000) = 0x7fb9fa121000
+mmap(0x7fb9fa1a1000, 376832, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x90000) = 0x7fb9fa1a1000
+mmap(0x7fb9fa1fd000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0xeb000) = 0x7fb9fa1fd000
+close(3)                                = 0
+openat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/server/libgcc_s.so.1", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "glibc-hwcaps/x86-64-v3/libgcc_s.so.1", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "glibc-hwcaps/x86-64-v2/libgcc_s.so.1", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "libgcc_s.so.1", O_RDONLY|O_CLOEXEC) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/usr/lib/libgcc_s.so.1", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\0\0\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0644, st_size=728120, ...}) = 0
+mmap(NULL, 147912, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7fb9fa0ec000
+mmap(0x7fb9fa0f0000, 110592, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x4000) = 0x7fb9fa0f0000
+mmap(0x7fb9fa10b000, 16384, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x1f000) = 0x7fb9fa10b000
+mmap(0x7fb9fa10f000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x22000) = 0x7fb9fa10f000
+close(3)                                = 0
+mmap(NULL, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fb9fa0ea000
+mmap(NULL, 12288, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fb9fa0e7000
+arch_prctl(ARCH_SET_FS, 0x7fb9fa0e77c0) = 0
+set_tid_address(0x7fb9fa0e7a90)         = 11052
+set_robust_list(0x7fb9fa0e7aa0, 24)     = 0
+rseq(0x7fb9fa0e80e0, 0x20, 0, 0x53053053) = 0
+mprotect(0x7fb9f8bf2000, 16384, PROT_READ) = 0
+mprotect(0x7fb9fa10f000, 4096, PROT_READ) = 0
+mprotect(0x7fb9fa1fd000, 4096, PROT_READ) = 0
+mprotect(0x7fb9f8869000, 53248, PROT_READ) = 0
+mprotect(0x7fb9f9f83000, 831488, PROT_READ) = 0
+mprotect(0x55b495c2f000, 4096, PROT_READ) = 0
+mprotect(0x7fb9fa25e000, 8192, PROT_READ) = 0
+prlimit64(0, RLIMIT_STACK, NULL, {rlim_cur=8192*1024, rlim_max=RLIM64_INFINITY}) = 0
+munmap(0x7fb9fa1ff000, 171307)          = 0
+futex(0x7fb9f88776fc, FUTEX_WAKE_PRIVATE, 2147483647) = 0
+getrandom("\xf5\xb2\xe2\xbf\xa7\xc2\x93\x85", 8, GRND_NONBLOCK) = 8
+brk(NULL)                               = 0x55b497c10000
+brk(0x55b497c31000)                     = 0x55b497c31000
+brk(0x55b497c52000)                     = 0x55b497c52000
+getpid()                                = 11052
+openat(AT_FDCWD, "/sys/devices/system/cpu/possible", O_RDONLY|O_CLOEXEC) = 3
+read(3, "0-11\n", 1024)                 = 5
+close(3)                                = 0
+sysinfo({uptime=14311, loads=[22240, 25824, 30624], totalram=16640180224, freeram=8417648640, sharedram=1043480576, bufferram=176840704, totalswap=18307149824, freeswap=18307149824, procs=2070, totalhigh=0, freehigh=0, mem_unit=1}) = 0
+openat(AT_FDCWD, "/proc/stat", O_RDONLY|O_CLOEXEC) = 3
+fstat(3, {st_mode=S_IFREG|0444, st_size=0, ...}) = 0
+read(3, "cpu  439409 5 141908 16518389 46"..., 1024) = 1024
+close(3)                                = 0
+mmap(NULL, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fb9fa228000
+mprotect(0x7fb9fa228000, 4096, PROT_READ|PROT_WRITE|PROT_EXEC) = 0
+munmap(0x7fb9fa228000, 4096)            = 0
+readlink("/usr", 0x7ffe2365e440, 1023)  = -1 EINVAL (Invalid argument)
+readlink("/usr/lib", 0x7ffe2365e440, 1023) = -1 EINVAL (Invalid argument)
+readlink("/usr/lib/jvm", 0x7ffe2365e440, 1023) = -1 EINVAL (Invalid argument)
+readlink("/usr/lib/jvm/java-21-openjdk", 0x7ffe2365e440, 1023) = -1 EINVAL (Invalid argument)
+readlink("/usr/lib/jvm/java-21-openjdk/lib", 0x7ffe2365e440, 1023) = -1 EINVAL (Invalid argument)
+readlink("/usr/lib/jvm/java-21-openjdk/lib/server", 0x7ffe2365e440, 1023) = -1 EINVAL (Invalid argument)
+readlink("/usr/lib/jvm/java-21-openjdk/lib/server/libjvm.so", 0x7ffe2365e440, 1023) = -1 EINVAL (Invalid argument)
+newfstatat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/modules", {st_mode=S_IFREG|0644, st_size=142489915, ...}, 0) = 0
+getpid()                                = 11052
+openat(AT_FDCWD, "/etc/localtime", O_RDONLY|O_CLOEXEC) = 3
+fstat(3, {st_mode=S_IFREG|0644, st_size=2298, ...}) = 0
+fstat(3, {st_mode=S_IFREG|0644, st_size=2298, ...}) = 0
+read(3, "TZif2\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\t\0\0\0\t\0\0\0\0"..., 4096) = 2298
+lseek(3, -1449, SEEK_CUR)               = 849
+read(3, "TZif2\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\t\0\0\0\t\0\0\0\0"..., 4096) = 1449
+close(3)                                = 0
+newfstatat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/libjimage.so", {st_mode=S_IFREG|0755, st_size=167536, ...}, 0) = 0
+openat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/libjimage.so", O_RDONLY|O_CLOEXEC) = 3
+fstat(3, {st_mode=S_IFREG|0755, st_size=167536, ...}) = 0
+read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\0\0\0\0\0\0\0"..., 4096) = 4096
+lseek(3, 0, SEEK_SET)                   = 0
+read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\0\0\0\0\0\0\0"..., 4096) = 4096
+close(3)                                = 0
+openat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/libjimage.so", O_RDONLY|O_CLOEXEC) = 3
+read(3, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\0\0\0\0\0\0\0"..., 832) = 832
+fstat(3, {st_mode=S_IFREG|0755, st_size=167536, ...}) = 0
+mmap(NULL, 24720, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 3, 0) = 0x7fb9fa222000
+mmap(0x7fb9fa224000, 8192, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x2000) = 0x7fb9fa224000
+mmap(0x7fb9fa226000, 4096, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x4000) = 0x7fb9fa226000
+mmap(0x7fb9fa227000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 3, 0x4000) = 0x7fb9fa227000
+close(3)                                = 0
+mprotect(0x7fb9fa227000, 4096, PROT_READ) = 0
+openat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/modules", O_RDONLY) = 3
+newfstatat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/modules", {st_mode=S_IFREG|0644, st_size=142489915, ...}, 0) = 0
+pread64(3, "\332\332\376\312\0\0\1\0\0\0\0\0\324w\0\0\324w\0\0\27\252\t\0\235Z\n\0", 28, 0) = 28
+mmap(NULL, 142489915, PROT_READ, MAP_SHARED, 3, 0) = 0x7fb9efe00000
+newfstatat(AT_FDCWD, ".hotspotrc", 0x7ffe2365e9c0, 0) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/proc/cgroups", O_RDONLY|O_CLOEXEC) = 4
+fstat(4, {st_mode=S_IFREG|0444, st_size=0, ...}) = 0
+read(4, "#subsys_name\thierarchy\tnum_cgrou"..., 1024) = 254
+read(4, "", 1024)                       = 0
+close(4)                                = 0
+openat(AT_FDCWD, "/proc/self/cgroup", O_RDONLY|O_CLOEXEC) = 4
+fstat(4, {st_mode=S_IFREG|0444, st_size=0, ...}) = 0
+read(4, "0::/user.slice/user-1000.slice/s"..., 1024) = 47
+read(4, "", 1024)                       = 0
+close(4)                                = 0
+openat(AT_FDCWD, "/proc/self/mountinfo", O_RDONLY|O_CLOEXEC) = 4
+fstat(4, {st_mode=S_IFREG|0444, st_size=0, ...}) = 0
+read(4, "22 27 0:20 / /proc rw,nosuid,nod"..., 1024) = 1024
+read(4, ",nosuid,nodev,noexec,relatime sh"..., 1024) = 1024
+read(4, " rw,fmask=0077,dmask=0077,codepa"..., 1024) = 372
+read(4, "", 1024)                       = 0
+close(4)                                = 0
+openat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/endorsed", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = -1 ENOENT (No such file or directory)
+openat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/ext", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = -1 ENOENT (No such file or directory)
+sched_getaffinity(0, 128, [0 1 2 3 4 5 6 7 8 9 10 11]) = 8
+openat(AT_FDCWD, "/sys/fs/cgroup/user.slice/user-1000.slice/session-2.scope/cpu.max", O_RDONLY|O_CLOEXEC) = 4
+fstat(4, {st_mode=S_IFREG|0644, st_size=0, ...}) = 0
+read(4, "max 100000\n", 4096)           = 11
+close(4)                                = 0
+openat(AT_FDCWD, "/sys/fs/cgroup/user.slice/user-1000.slice/session-2.scope/cpu.max", O_RDONLY|O_CLOEXEC) = 4
+fstat(4, {st_mode=S_IFREG|0644, st_size=0, ...}) = 0
+read(4, "max 100000\n", 4096)           = 11
+close(4)                                = 0
+openat(AT_FDCWD, "/proc/meminfo", O_RDONLY|O_CLOEXEC) = 4
+fstat(4, {st_mode=S_IFREG|0444, st_size=0, ...}) = 0
+read(4, "MemTotal:       16250176 kB\nMemF"..., 1024) = 1024
+read(4, "      87184 kB\nVmallocChunk:    "..., 1024) = 535
+close(4)                                = 0
+openat(AT_FDCWD, "/sys/kernel/mm/hugepages", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 4
+fstat(4, {st_mode=S_IFDIR|0755, st_size=0, ...}) = 0
+getdents64(4, 0x55b497c22610 /* 4 entries */, 32768) = 128
+getdents64(4, 0x55b497c22610 /* 0 entries */, 32768) = 0
+close(4)                                = 0
+openat(AT_FDCWD, "/sys/kernel/mm/transparent_hugepage/enabled", O_RDONLY) = 4
+fstat(4, {st_mode=S_IFREG|0644, st_size=4096, ...}) = 0
+read(4, "[always] madvise never\n", 4096) = 23
+close(4)                                = 0
+openat(AT_FDCWD, "/sys/kernel/mm/transparent_hugepage/hpage_pmd_size", O_RDONLY) = 4
+fstat(4, {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+read(4, "2097152\n", 4096)              = 8
+close(4)                                = 0
+openat(AT_FDCWD, "/sys/fs/cgroup/user.slice/user-1000.slice/session-2.scope/memory.max", O_RDONLY|O_CLOEXEC) = 4
+fstat(4, {st_mode=S_IFREG|0644, st_size=0, ...}) = 0
+read(4, "max\n", 4096)                  = 4
+close(4)                                = 0
+prlimit64(0, RLIMIT_AS, NULL, {rlim_cur=RLIM64_INFINITY, rlim_max=RLIM64_INFINITY}) = 0
+prlimit64(0, RLIMIT_AS, NULL, {rlim_cur=RLIM64_INFINITY, rlim_max=RLIM64_INFINITY}) = 0
+prlimit64(0, RLIMIT_AS, NULL, {rlim_cur=RLIM64_INFINITY, rlim_max=RLIM64_INFINITY}) = 0
+clock_getres(0xfffea69e /* CLOCK_??? */, {tv_sec=0, tv_nsec=1}) = 0
+rt_sigprocmask(SIG_BLOCK, NULL, [], 8)  = 0
+rt_sigaction(SIGUSR2, {sa_handler=0x7fb9f99464f0, sa_mask=[], sa_flags=SA_RESTORER|SA_RESTART|SA_SIGINFO, sa_restorer=0x7fb9f8a5a770}, NULL, 8) = 0
+rt_sigaction(SIGSEGV, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+rt_sigaction(SIGSEGV, {sa_handler=0x7fb9f9945a80, sa_mask=~[ILL TRAP BUS FPE SEGV RTMIN RT_1], sa_flags=SA_RESTORER|SA_RESTART|SA_SIGINFO, sa_restorer=0x7fb9f8a5a770}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+rt_sigaction(SIGPIPE, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+rt_sigaction(SIGPIPE, {sa_handler=0x7fb9f9945a80, sa_mask=~[ILL TRAP BUS FPE SEGV RTMIN RT_1], sa_flags=SA_RESTORER|SA_RESTART|SA_SIGINFO, sa_restorer=0x7fb9f8a5a770}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+rt_sigaction(SIGBUS, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+rt_sigaction(SIGBUS, {sa_handler=0x7fb9f9945a80, sa_mask=~[ILL TRAP BUS FPE SEGV RTMIN RT_1], sa_flags=SA_RESTORER|SA_RESTART|SA_SIGINFO, sa_restorer=0x7fb9f8a5a770}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+rt_sigaction(SIGILL, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+rt_sigaction(SIGILL, {sa_handler=0x7fb9f9945a80, sa_mask=~[ILL TRAP BUS FPE SEGV RTMIN RT_1], sa_flags=SA_RESTORER|SA_RESTART|SA_SIGINFO, sa_restorer=0x7fb9f8a5a770}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+rt_sigaction(SIGFPE, NULL, {sa_handler=SIG_IGN, sa_mask=[], sa_flags=0}, 8) = 0
+rt_sigaction(SIGFPE, {sa_handler=0x7fb9f9945a80, sa_mask=~[ILL TRAP BUS FPE SEGV RTMIN RT_1], sa_flags=SA_RESTORER|SA_RESTART|SA_SIGINFO, sa_restorer=0x7fb9f8a5a770}, {sa_handler=SIG_IGN, sa_mask=[], sa_flags=0}, 8) = 0
+rt_sigaction(SIGXFSZ, NULL, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+rt_sigaction(SIGXFSZ, {sa_handler=0x7fb9f9945a80, sa_mask=~[ILL TRAP BUS FPE SEGV RTMIN RT_1], sa_flags=SA_RESTORER|SA_RESTART|SA_SIGINFO, sa_restorer=0x7fb9f8a5a770}, {sa_handler=SIG_DFL, sa_mask=[], sa_flags=0}, 8) = 0
+prlimit64(0, RLIMIT_STACK, NULL, {rlim_cur=8192*1024, rlim_max=RLIM64_INFINITY}) = 0
+openat(AT_FDCWD, "/proc/self/maps", O_RDONLY|O_CLOEXEC) = 4
+fstat(4, {st_mode=S_IFREG|0444, st_size=0, ...}) = 0
+read(4, "55b495c2c000-55b495c2d000 r--p 0"..., 1024) = 1024
+read(4, "       /usr/lib/libstdc++.so.6.0"..., 1024) = 1024
+read(4, "ib/server/libjvm.so\n7fb9f9d94000"..., 1024) = 1024
+read(4, "                /usr/lib/libm.so"..., 1024) = 1024
+read(4, "rw-p 00000000 00:00 0 \n7fb9fa22b"..., 1024) = 863
+close(4)                                = 0
+prlimit64(0, RLIMIT_NOFILE, NULL, {rlim_cur=1024, rlim_max=512*1024}) = 0
+prlimit64(0, RLIMIT_NOFILE, {rlim_cur=512*1024, rlim_max=512*1024}, NULL) = 0
+openat(AT_FDCWD, "/proc/self/coredump_filter", O_RDWR|O_CLOEXEC) = 4
+fstat(4, {st_mode=S_IFREG|0644, st_size=0, ...}) = 0
+read(4, "00000033\n", 1024)             = 9
+lseek(4, 0, SEEK_SET)                   = 0
+write(4, "0x37", 4)                     = 4
+close(4)                                = 0
+openat(AT_FDCWD, "/proc/self/coredump_filter", O_RDWR|O_CLOEXEC) = 4
+fstat(4, {st_mode=S_IFREG|0644, st_size=0, ...}) = 0
+read(4, "00000037\n", 1024)             = 9
+lseek(4, 0, SEEK_SET)                   = 0
+write(4, "0x3f", 4)                     = 4
+close(4)                                = 0
+mmap(NULL, 4096, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = 0x7fb9fa221000
+mmap(0x7fb9fa221000, 4096, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fb9fa221000
+mprotect(0x7fb9fa221000, 4096, PROT_NONE) = 0
+mmap(NULL, 8192, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = 0x7fb9fa21f000
+mmap(0x7fb9fa21f000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fb9fa21f000
+mprotect(0x7fb9fa21f000, 4096, PROT_NONE) = 0
+mprotect(0x7fb9fa220000, 4096, PROT_READ) = 0
+getpid()                                = 11052
+geteuid()                               = 1000
+newfstatat(AT_FDCWD, "/etc/nsswitch.conf", {st_mode=S_IFREG|0644, st_size=390, ...}, 0) = 0
+newfstatat(AT_FDCWD, "/", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+openat(AT_FDCWD, "/etc/nsswitch.conf", O_RDONLY|O_CLOEXEC) = 4
+fstat(4, {st_mode=S_IFREG|0644, st_size=390, ...}) = 0
+read(4, "# Name Service Switch configurat"..., 4096) = 390
+read(4, "", 4096)                       = 0
+fstat(4, {st_mode=S_IFREG|0644, st_size=390, ...}) = 0
+close(4)                                = 0
+openat(AT_FDCWD, "/etc/passwd", O_RDONLY|O_CLOEXEC) = 4
+fstat(4, {st_mode=S_IFREG|0644, st_size=2023, ...}) = 0
+lseek(4, 0, SEEK_SET)                   = 0
+read(4, "root:x:0:0::/root:/bin/bash\nnobo"..., 4096) = 2023
+close(4)                                = 0
+openat(AT_FDCWD, "/tmp/hsperfdata_maksym", O_RDONLY|O_NOFOLLOW) = 4
+fstat(4, {st_mode=S_IFDIR|0750, st_size=40, ...}) = 0
+geteuid()                               = 1000
+openat(AT_FDCWD, "/tmp/hsperfdata_maksym", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 5
+fstat(5, {st_mode=S_IFDIR|0750, st_size=40, ...}) = 0
+fstat(4, {st_mode=S_IFDIR|0750, st_size=40, ...}) = 0
+fstat(5, {st_mode=S_IFDIR|0750, st_size=40, ...}) = 0
+close(4)                                = 0
+openat(AT_FDCWD, ".", O_RDONLY)         = 4
+fchdir(5)                               = 0
+getdents64(5, 0x55b497c3be20 /* 2 entries */, 32768) = 48
+getdents64(5, 0x55b497c3be20 /* 0 entries */, 32768) = 0
+fchdir(4)                               = 0
+close(4)                                = 0
+close(5)                                = 0
+mkdir("/tmp/hsperfdata_maksym", 0755)   = -1 EEXIST (File exists)
+newfstatat(AT_FDCWD, "/tmp/hsperfdata_maksym", {st_mode=S_IFDIR|0750, st_size=40, ...}, AT_SYMLINK_NOFOLLOW) = 0
+geteuid()                               = 1000
+openat(AT_FDCWD, "/tmp/hsperfdata_maksym", O_RDONLY|O_NOFOLLOW) = 4
+fstat(4, {st_mode=S_IFDIR|0750, st_size=40, ...}) = 0
+geteuid()                               = 1000
+openat(AT_FDCWD, "/tmp/hsperfdata_maksym", O_RDONLY|O_NONBLOCK|O_CLOEXEC|O_DIRECTORY) = 5
+fstat(5, {st_mode=S_IFDIR|0750, st_size=40, ...}) = 0
+fstat(4, {st_mode=S_IFDIR|0750, st_size=40, ...}) = 0
+fstat(5, {st_mode=S_IFDIR|0750, st_size=40, ...}) = 0
+close(4)                                = 0
+openat(AT_FDCWD, ".", O_RDONLY)         = 4
+fchdir(5)                               = 0
+openat(AT_FDCWD, "11052", O_RDWR|O_CREAT|O_NOFOLLOW|O_CLOEXEC, 0600) = 6
+fstat(6, {st_mode=S_IFREG|0600, st_size=0, ...}) = 0
+fcntl(6, F_GETFD)                       = 0x1 (flags FD_CLOEXEC)
+fchdir(4)                               = 0
+close(4)                                = 0
+close(5)                                = 0
+fstat(6, {st_mode=S_IFREG|0600, st_size=0, ...}) = 0
+flock(6, LOCK_EX|LOCK_NB)               = 0
+ftruncate(6, 0)                         = 0
+ftruncate(6, 32768)                     = 0
+lseek(6, 0, SEEK_SET)                   = 0
+write(6, "\0", 1)                       = 1
+lseek(6, 4096, SEEK_SET)                = 4096
+write(6, "\0", 1)                       = 1
+lseek(6, 8192, SEEK_SET)                = 8192
+write(6, "\0", 1)                       = 1
+lseek(6, 12288, SEEK_SET)               = 12288
+write(6, "\0", 1)                       = 1
+lseek(6, 16384, SEEK_SET)               = 16384
+write(6, "\0", 1)                       = 1
+lseek(6, 20480, SEEK_SET)               = 20480
+write(6, "\0", 1)                       = 1
+lseek(6, 24576, SEEK_SET)               = 24576
+write(6, "\0", 1)                       = 1
+lseek(6, 28672, SEEK_SET)               = 28672
+write(6, "\0", 1)                       = 1
+mmap(NULL, 32768, PROT_READ|PROT_WRITE, MAP_SHARED, 6, 0) = 0x7fb9fa217000
+close(6)                                = 0
+gettid()                                = 11052
+rt_sigprocmask(SIG_SETMASK, ~[RTMIN RT_1], [], 8) = 0
+rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+rt_sigprocmask(SIG_BLOCK, NULL, [], 8)  = 0
+rt_sigprocmask(SIG_UNBLOCK, [ILL BUS FPE SEGV USR2], NULL, 8) = 0
+mincore(0x7ffe23561000, 4096, 0x7ffe2365f9af) = -1 ENOMEM (Cannot allocate memory)
+mmap(0x7ffe23561000, 16384, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7ffe23561000
+mprotect(0x7ffe23561000, 16384, PROT_NONE) = 0
+newfstatat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/libjava.so", {st_mode=S_IFREG|0755, st_size=1309272, ...}, 0) = 0
+openat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/libjava.so", O_RDONLY|O_CLOEXEC) = 4
+fstat(4, {st_mode=S_IFREG|0755, st_size=1309272, ...}) = 0
+read(4, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\0\0\0\0\0\0\0"..., 4096) = 4096
+lseek(4, 0, SEEK_SET)                   = 0
+read(4, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\0\0\0\0\0\0\0"..., 4096) = 4096
+close(4)                                = 0
+openat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/libjava.so", O_RDONLY|O_CLOEXEC) = 4
+read(4, "\177ELF\2\1\1\0\0\0\0\0\0\0\0\0\3\0>\0\1\0\0\0\0\0\0\0\0\0\0\0"..., 832) = 832
+fstat(4, {st_mode=S_IFREG|0755, st_size=1309272, ...}) = 0
+mmap(NULL, 135592, PROT_READ, MAP_PRIVATE|MAP_DENYWRITE, 4, 0) = 0x7fb9f89f8000
+mmap(0x7fb9f8a05000, 53248, PROT_READ|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 4, 0xd000) = 0x7fb9f8a05000
+mmap(0x7fb9f8a12000, 20480, PROT_READ, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 4, 0x1a000) = 0x7fb9f8a12000
+mmap(0x7fb9f8a17000, 8192, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_DENYWRITE, 4, 0x1e000) = 0x7fb9f8a17000
+mmap(0x7fb9f8a19000, 424, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fb9f8a19000
+close(4)                                = 0
+mprotect(0x7fb9f8a17000, 4096, PROT_READ) = 0
+newfstatat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/modules", {st_mode=S_IFREG|0644, st_size=142489915, ...}, 0) = 0
+readlink("/usr", 0x7ffe2365e2e0, 1023)  = -1 EINVAL (Invalid argument)
+readlink("/usr/lib", 0x7ffe2365e2e0, 1023) = -1 EINVAL (Invalid argument)
+readlink("/usr/lib/jvm", 0x7ffe2365e2e0, 1023) = -1 EINVAL (Invalid argument)
+readlink("/usr/lib/jvm/java-21-openjdk", 0x7ffe2365e2e0, 1023) = -1 EINVAL (Invalid argument)
+readlink("/usr/lib/jvm/java-21-openjdk/lib", 0x7ffe2365e2e0, 1023) = -1 EINVAL (Invalid argument)
+readlink("/usr/lib/jvm/java-21-openjdk/lib/modules", 0x7ffe2365e2e0, 1023) = -1 EINVAL (Invalid argument)
+mmap(NULL, 50331648, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = 0x7fb9ece00000
+mmap(0x7fb9ece00000, 2555904, PROT_READ|PROT_WRITE|PROT_EXEC, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fb9ece00000
+mmap(NULL, 393216, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = 0x7fb9f8998000
+mmap(0x7fb9f8998000, 20480, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fb9f8998000
+--- SIGSEGV {si_signo=SIGSEGV, si_code=SEGV_MAPERR, si_addr=NULL} ---
+rt_sigprocmask(SIG_UNBLOCK, [ILL TRAP BUS FPE SEGV], NULL, 8) = 0
+rt_sigreturn({mask=[]})                 = 0
+openat(AT_FDCWD, "/sys/devices/system/cpu/cpu0/microcode/version", O_RDONLY|O_CLOEXEC) = 4
+fstat(4, {st_mode=S_IFREG|0444, st_size=4096, ...}) = 0
+read(4, "0xf4\n", 4096)                 = 5
+close(4)                                = 0
+brk(0x55b497c73000)                     = 0x55b497c73000
+mmap(0x708000000, 4160749568, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = 0x708000000
+mmap(NULL, 8130560, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = 0x7fb9ec63f000
+mmap(0x708000000, 86638592, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x708000000
+mmap(0x7fb9ec63f000, 172032, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fb9ec63f000
+mmap(0x75aaa0000, 173408256, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x75aaa0000
+mmap(NULL, 5419008, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = 0x7fb9ec114000
+mmap(0x7fb9ec114000, 339968, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fb9ec114000
+mmap(0x7fb9ec8d4000, 339968, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fb9ec8d4000
+openat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/server/classes.jsa", O_RDONLY|O_CLOEXEC) = 4
+fstat(4, {st_mode=S_IFREG|0444, st_size=14602240, ...}) = 0
+lseek(4, 0, SEEK_SET)                   = 0
+read(4, "\242\253\v\360\244\08\342\22\0\0\0\20\3\0\0\0\0\0\0\0\0\0\0", 24) = 24
+lseek(4, 0, SEEK_END)                   = 14602240
+lseek(4, 0, SEEK_SET)                   = 0
+read(4, "\242\253\v\360\244\08\342\22\0\0\0\20\3\0\0\0\0\0\0\0\0\0\0\2573D^\0\0\0\0"..., 784) = 784
+lseek(4, 0, SEEK_SET)                   = 0
+read(4, "\242\253\v\360\244\08\342\22\0\0\0\20\3\0\0\0\0\0\0\0\0\0\0\2573D^\0\0\0\0"..., 784) = 784
+lseek(4, 0, SEEK_END)                   = 14602240
+mmap(NULL, 1090519040, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = 0x7fb9ab114000
+munmap(0x7fb9ab114000, 1090519040)      = 0
+mmap(NULL, 1107296256, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = 0x7fb9aa114000
+munmap(0x7fb9aa114000, 15646720)        = 0
+munmap(0x7fb9ec000000, 1130496)         = 0
+mmap(0x7fb9ab000000, 4743168, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED, 4, 0x1000) = 0x7fb9ab000000
+mmap(0x7fb9ab486000, 8519680, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED, 4, 0x487000) = 0x7fb9ab486000
+mmap(NULL, 253952, PROT_READ, MAP_PRIVATE, 4, 0xca7000) = 0x7fb9f895a000
+newfstatat(AT_FDCWD, "/usr/lib/jvm/java-21-openjdk/lib/modules", {st_mode=S_IFREG|0644, st_size=142489915, ...}, 0) = 0
+lseek(4, 13520896, SEEK_SET)            = 13520896
+read(4, "\1\351J\22\16\0\0\0\330\350\0\0\0\0\0\0\0\1\1\0\30\0\340\377\1[\245\325\0\0\0\0"..., 1079096) = 1079096
+close(4)                                = 0
+munmap(0x7fb9f895a000, 253952)          = 0
+mmap(NULL, 266240, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fb9f8957000
+mmap(NULL, 372736, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fb9f88fc000
+mmap(NULL, 528384, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0) = 0x7fb9f887b000
+rt_sigaction(SIGRT_1, {sa_handler=0x7fb9f8aa6720, sa_mask=[], sa_flags=SA_RESTORER|SA_ONSTACK|SA_RESTART|SA_SIGINFO, sa_restorer=0x7fb9f8a5a770}, NULL, 8) = 0
+rt_sigprocmask(SIG_UNBLOCK, [RTMIN RT_1], NULL, 8) = 0
+mmap(NULL, 1052672, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0) = 0x7fb9ec013000
+mprotect(0x7fb9ec014000, 1048576, PROT_READ|PROT_WRITE) = 0
+rt_sigprocmask(SIG_BLOCK, ~[], [], 8)   = 0
+clone3({flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, child_tid=0x7fb9ec113990, parent_tid=0x7fb9ec113990, exit_signal=0, stack=0x7fb9ec013000, stack_size=0xfff00, tls=0x7fb9ec1136c0} => {parent_tid=[11055]}, 88) = 11055
+rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+futex(0x55b497c68638, FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME, 0, NULL, FUTEX_BITSET_MATCH_ANY) = 0
+futex(0x55b497c685e8, FUTEX_WAKE_PRIVATE, 1) = 0
+futex(0x55b497c6863c, FUTEX_WAKE_PRIVATE, 1) = 1
+brk(0x55b497c94000)                     = 0x55b497c94000
+newfstatat(AT_FDCWD, ".hotspot_compiler", 0x7ffe2365f400, 0) = -1 ENOENT (No such file or directory)
+mmap(0x7fb9ac040000, 65536, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fb9ac040000
+mmap(NULL, 67108864, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_NORESERVE, -1, 0) = 0x7fb9a0000000
+mmap(0x7fb9a0000000, 65536, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fb9a0000000
+mmap(NULL, 1052672, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0) = 0x7fb9aaeff000
+mprotect(0x7fb9aaf00000, 1048576, PROT_READ|PROT_WRITE) = 0
+rt_sigprocmask(SIG_BLOCK, ~[], [], 8)   = 0
+clone3({flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, child_tid=0x7fb9aafff990, parent_tid=0x7fb9aafff990, exit_signal=0, stack=0x7fb9aaeff000, stack_size=0xfff00, tls=0x7fb9aafff6c0} => {parent_tid=[11056]}, 88) = 11056
+rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+futex(0x55b497c81e48, FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME, 0, NULL, FUTEX_BITSET_MATCH_ANY) = 0
+futex(0x55b497c81df8, FUTEX_WAKE_PRIVATE, 1) = 0
+futex(0x55b497c81e4c, FUTEX_WAKE_PRIVATE, 1) = 1
+futex(0x7fb9fa0a6810, FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME, 0, NULL, FUTEX_BITSET_MATCH_ANY) = 0
+futex(0x7fb9fa0a67c0, FUTEX_WAKE_PRIVATE, 1) = 0
+uname({sysname="Linux", nodename="manjaro", ...}) = 0
+openat(AT_FDCWD, "/usr/lib/locale/locale-archive", O_RDONLY|O_CLOEXEC) = 4
+fstat(4, {st_mode=S_IFREG|0644, st_size=3060144, ...}) = 0
+mmap(NULL, 3060144, PROT_READ, MAP_PRIVATE, 4, 0) = 0x7fb9aac00000
+close(4)                                = 0
+ioctl(1, TCGETS, {c_iflag=BRKINT|IGNPAR|ICRNL|IXON|IMAXBEL|IUTF8, c_oflag=NL0|CR0|TAB0|BS0|VT0|FF0|OPOST|ONLCR, c_cflag=B38400|CS8|CREAD, c_lflag=ISIG|ICANON|ECHO|ECHOE|ECHOK|IEXTEN|ECHOCTL|ECHOKE, ...}) = 0
+ioctl(2, TCGETS, {c_iflag=BRKINT|IGNPAR|ICRNL|IXON|IMAXBEL|IUTF8, c_oflag=NL0|CR0|TAB0|BS0|VT0|FF0|OPOST|ONLCR, c_cflag=B38400|CS8|CREAD, c_lflag=ISIG|ICANON|ECHO|ECHOE|ECHOK|IEXTEN|ECHOCTL|ECHOKE, ...}) = 0
+getuid()                                = 1000
+newfstatat(AT_FDCWD, "/etc/nsswitch.conf", {st_mode=S_IFREG|0644, st_size=390, ...}, 0) = 0
+openat(AT_FDCWD, "/etc/passwd", O_RDONLY|O_CLOEXEC) = 4
+fstat(4, {st_mode=S_IFREG|0644, st_size=2023, ...}) = 0
+lseek(4, 0, SEEK_SET)                   = 0
+read(4, "root:x:0:0::/root:/bin/bash\nnobo"..., 4096) = 2023
+close(4)                                = 0
+newfstatat(AT_FDCWD, "/etc/localtime", {st_mode=S_IFREG|0644, st_size=2298, ...}, 0) = 0
+getcwd("/home/maksym/Documents/tese-rr/rr2", 4096) = 35
+fcntl(0, F_GETFL)                       = 0x8002 (flags O_RDWR|O_LARGEFILE)
+fcntl(1, F_GETFL)                       = 0x8002 (flags O_RDWR|O_LARGEFILE)
+fcntl(2, F_GETFL)                       = 0x8002 (flags O_RDWR|O_LARGEFILE)
+pread64(3, "\312\376\272\276\0\0\0A\0\261\4?\214\314\315\4@@\0\0\n\0\4\0\5\7\0\6\f\0\7\0"..., 4354, 24378006) = 4354
+mmap(NULL, 1052672, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0) = 0x7fb9aaaff000
+mprotect(0x7fb9aab00000, 1048576, PROT_READ|PROT_WRITE) = 0
+rt_sigprocmask(SIG_BLOCK, ~[], [], 8)   = 0
+clone3({flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, child_tid=0x7fb9aabff990, parent_tid=0x7fb9aabff990, exit_signal=0, stack=0x7fb9aaaff000, stack_size=0xfff00, tls=0x7fb9aabff6c0} => {parent_tid=[11057]}, 88) = 11057
+rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+futex(0x55b497c90ba8, FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME, 0, NULL, FUTEX_BITSET_MATCH_ANY) = -1 EAGAIN (Resource temporarily unavailable)
+futex(0x55b497c90b58, FUTEX_WAKE_PRIVATE, 1) = 0
+futex(0x55b497c90bac, FUTEX_WAKE_PRIVATE, 1) = 1
+mmap(NULL, 1052672, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0) = 0x7fb9aa9fe000
+mprotect(0x7fb9aa9ff000, 1048576, PROT_READ|PROT_WRITE) = 0
+rt_sigprocmask(SIG_BLOCK, ~[], [], 8)   = 0
+clone3({flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, child_tid=0x7fb9aaafe990, parent_tid=0x7fb9aaafe990, exit_signal=0, stack=0x7fb9aa9fe000, stack_size=0xfff00, tls=0x7fb9aaafe6c0} => {parent_tid=[11058]}, 88) = 11058
+rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+futex(0x55b497c921c8, FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME, 0, NULL, FUTEX_BITSET_MATCH_ANY) = 0
+futex(0x55b497c92178, FUTEX_WAKE_PRIVATE, 1) = 0
+brk(0x55b497cb5000)                     = 0x55b497cb5000
+brk(0x55b497cb3000)                     = 0x55b497cb3000
+futex(0x55b497c921cc, FUTEX_WAKE_PRIVATE, 1) = 1
+futex(0x55b497c92178, FUTEX_WAKE_PRIVATE, 1) = 1
+futex(0x7fb9fa0a6110, FUTEX_WAKE_PRIVATE, 1) = 1
+mmap(NULL, 1052672, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0) = 0x7fb9aa8fd000
+mprotect(0x7fb9aa8fe000, 1048576, PROT_READ|PROT_WRITE) = 0
+rt_sigprocmask(SIG_BLOCK, ~[], [], 8)   = 0
+clone3({flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, child_tid=0x7fb9aa9fd990, parent_tid=0x7fb9aa9fd990, exit_signal=0, stack=0x7fb9aa8fd000, stack_size=0xfff00, tls=0x7fb9aa9fd6c0} => {parent_tid=[11059]}, 88) = 11059
+rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+futex(0x55b497c938c8, FUTEX_WAKE_PRIVATE, 1) = 1
+futex(0x55b497c93878, FUTEX_WAKE_PRIVATE, 1) = 1
+mmap(NULL, 1052672, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0) = 0x7fb9aa7fc000
+mprotect(0x7fb9aa7fd000, 1048576, PROT_READ|PROT_WRITE) = 0
+rt_sigprocmask(SIG_BLOCK, ~[], [], 8)   = 0
+clone3({flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, child_tid=0x7fb9aa8fc990, parent_tid=0x7fb9aa8fc990, exit_signal=0, stack=0x7fb9aa7fc000, stack_size=0xfff00, tls=0x7fb9aa8fc6c0} => {parent_tid=[11060]}, 88) = 11060
+rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+futex(0x55b497c94e38, FUTEX_WAKE_PRIVATE, 1) = 1
+futex(0x55b497c94de8, FUTEX_WAKE_PRIVATE, 1) = 1
+readlink("/home", 0x7ffe2365c660, 1023) = -1 EINVAL (Invalid argument)
+readlink("/home/maksym", 0x7ffe2365c660, 1023) = -1 EINVAL (Invalid argument)
+readlink("/home/maksym/Documents", 0x7ffe2365c660, 1023) = -1 EINVAL (Invalid argument)
+readlink("/home/maksym/Documents/tese-rr", 0x7ffe2365c660, 1023) = -1 EINVAL (Invalid argument)
+readlink("/home/maksym/Documents/tese-rr/rr2", 0x7ffe2365c660, 1023) = -1 EINVAL (Invalid argument)
+faccessat2(AT_FDCWD, "/home/maksym/Documents/tese-rr/rr2/", F_OK, AT_EACCESS) = 0
+newfstatat(AT_FDCWD, "/home/maksym/Documents/tese-rr/rr2", {st_mode=S_IFDIR|0755, st_size=4096, ...}, 0) = 0
+mmap(NULL, 1052672, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0) = 0x7fb9aa6fb000
+mprotect(0x7fb9aa6fc000, 1048576, PROT_READ|PROT_WRITE) = 0
+rt_sigprocmask(SIG_BLOCK, ~[], [], 8)   = 0
+clone3({flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, child_tid=0x7fb9aa7fb990, parent_tid=0x7fb9aa7fb990, exit_signal=0, stack=0x7fb9aa6fb000, stack_size=0xfff00, tls=0x7fb9aa7fb6c0} => {parent_tid=[11061]}, 88) = 11061
+rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+futex(0x55b497ca2648, FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME, 0, NULL, FUTEX_BITSET_MATCH_ANY) = 0
+futex(0x55b497ca25f8, FUTEX_WAKE_PRIVATE, 1) = 0
+futex(0x55b497ca264c, FUTEX_WAKE_PRIVATE, 1) = 1
+futex(0x7fb9fa0a6114, FUTEX_WAKE_PRIVATE, 1) = 1
+futex(0x7fb9fa0a60c0, FUTEX_WAKE_PRIVATE, 1) = 1
+futex(0x7fb9fa0a6110, FUTEX_WAKE_PRIVATE, 1) = 1
+futex(0x7fb9fa0a60c0, FUTEX_WAKE_PRIVATE, 1) = 1
+pread64(3, "\312\376\272\276\0\0\0A\0\202\n\0\2\0\3\7\0\4\f\0\5\0\6\1\0'jdk/in"..., 2524, 19964257) = 2524
+readlink("/home", 0x7ffe2365c800, 1023) = -1 EINVAL (Invalid argument)
+readlink("/home/maksym", 0x7ffe2365c800, 1023) = -1 EINVAL (Invalid argument)
+readlink("/home/maksym/Documents", 0x7ffe2365c800, 1023) = -1 EINVAL (Invalid argument)
+readlink("/home/maksym/Documents/tese-rr", 0x7ffe2365c800, 1023) = -1 EINVAL (Invalid argument)
+readlink("/home/maksym/Documents/tese-rr/rr2", 0x7ffe2365c800, 1023) = -1 EINVAL (Invalid argument)
+newfstatat(AT_FDCWD, "/home/maksym/Documents/tese-rr/rr2/HelloWorld.class", {st_mode=S_IFREG|0644, st_size=427, ...}, 0) = 0
+pread64(3, "\312\376\272\276\0\0\0A\0G\t\0\2\0\3\7\0\4\f\0\5\0\6\1\0-jdk/in"..., 1634, 19962623) = 1634
+openat(AT_FDCWD, "/home/maksym/Documents/tese-rr/rr2/HelloWorld.class", O_RDONLY) = 4
+fstat(4, {st_mode=S_IFREG|0644, st_size=427, ...}) = 0
+mmap(NULL, 1052672, PROT_NONE, MAP_PRIVATE|MAP_ANONYMOUS|MAP_STACK, -1, 0) = 0x7fb9aa5fa000
+mprotect(0x7fb9aa5fb000, 1048576, PROT_READ|PROT_WRITE) = 0
+rt_sigprocmask(SIG_BLOCK, ~[], [], 8)   = 0
+clone3({flags=CLONE_VM|CLONE_FS|CLONE_FILES|CLONE_SIGHAND|CLONE_THREAD|CLONE_SYSVSEM|CLONE_SETTLS|CLONE_PARENT_SETTID|CLONE_CHILD_CLEARTID, child_tid=0x7fb9aa6fa990, parent_tid=0x7fb9aa6fa990, exit_signal=0, stack=0x7fb9aa5fa000, stack_size=0xfff00, tls=0x7fb9aa6fa6c0} => {parent_tid=[11062]}, 88) = 11062
+rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+futex(0x55b497ca5ae8, FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME, 0, NULL, FUTEX_BITSET_MATCH_ANY) = 0
+futex(0x55b497ca5a98, FUTEX_WAKE_PRIVATE, 1) = 0
+futex(0x55b497ca5aec, FUTEX_WAKE_PRIVATE, 1) = 1
+newfstatat(AT_FDCWD, "/home/maksym/Documents/tese-rr/rr2/HelloWorld.class", {st_mode=S_IFREG|0644, st_size=427, ...}, 0) = 0
+read(4, "\312\376\272\276\0\0\0A\0\35\n\0\2\0\3\7\0\4\f\0\5\0\6\1\0\20java/l"..., 427) = 427
+close(4)                                = 0
+futex(0x7fb9fa0a4ac0, FUTEX_WAKE_PRIVATE, 1) = 0
+mmap(0x7fb9a0400000, 65536, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fb9a0400000
+mmap(0x7fb9ac000000, 65536, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_FIXED|MAP_ANONYMOUS, -1, 0) = 0x7fb9ac000000
+write(1, "Hello, World \n", 14)         = 14
+futex(0x7fb9fa0a6114, FUTEX_WAKE_PRIVATE, 1) = 1
+futex(0x7fb9fa0a6910, FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME, 0, NULL, FUTEX_BITSET_MATCH_ANY) = 0
+futex(0x7fb9fa0a68c0, FUTEX_WAKE_PRIVATE, 1) = 0
+munmap(0x7ffe23561000, 16384)           = 0
+futex(0x7fb9fa0a4f10, FUTEX_WAKE_PRIVATE, 2147483647) = 1
+futex(0x55b497c81c88, FUTEX_WAIT_BITSET_PRIVATE|FUTEX_CLOCK_REALTIME, 0, NULL, FUTEX_BITSET_MATCH_ANY) = 0
+futex(0x55b497c81c38, FUTEX_WAKE_PRIVATE, 1) = 0
+clock_nanosleep(CLOCK_REALTIME, 0, {tv_sec=0, tv_nsec=1000000}, NULL) = 0
+unlink("/tmp/hsperfdata_maksym/11052")  = 0
+futex(0x7fb9fa0a7090, FUTEX_WAKE_PRIVATE, 2147483647) = 1
+rt_sigprocmask(SIG_SETMASK, [], NULL, 8) = 0
+exit_group(0)                           = ?
++++ exited with 0 +++

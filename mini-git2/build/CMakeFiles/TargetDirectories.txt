@@ -1,0 +1,9 @@
+/home/maksym/Documents/tese-rr/rr2/mini-git2/build/CMakeFiles/edit_cache.dir
+/home/maksym/Documents/tese-rr/rr2/mini-git2/build/CMakeFiles/rebuild_cache.dir
+/home/maksym/Documents/tese-rr/rr2/mini-git2/build/src/CMakeFiles/ministrace.dir
+/home/maksym/Documents/tese-rr/rr2/mini-git2/build/src/CMakeFiles/edit_cache.dir
+/home/maksym/Documents/tese-rr/rr2/mini-git2/build/src/CMakeFiles/rebuild_cache.dir
+/home/maksym/Documents/tese-rr/rr2/mini-git2/build/test/CMakeFiles/trace_pthread_fork.dir
+/home/maksym/Documents/tese-rr/rr2/mini-git2/build/test/CMakeFiles/trace_descendants.dir
+/home/maksym/Documents/tese-rr/rr2/mini-git2/build/test/CMakeFiles/edit_cache.dir
+/home/maksym/Documents/tese-rr/rr2/mini-git2/build/test/CMakeFiles/rebuild_cache.dir

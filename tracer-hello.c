@@ -23,7 +23,8 @@ int main(int argc, char* argv[]) {
             return 1;
         }
         //execvp(argv[1], &argv[1]);
-        execvp("./helloworld", NULL);
+        kill(getpid(), SIGSTOP);
+        execvp("./helloc", NULL);
         //execvp("java", "HelloWorld");
         
     } else if (child > 0){
@@ -32,10 +33,10 @@ int main(int argc, char* argv[]) {
         while (WIFSTOPPED(status)){
             ptrace(PTRACE_GETREGS, child, NULL, &regs);
             if (in == 0){
-                if(regs.orig_rax == 39){
+                //if(regs.orig_rax == 39){
                     printf("SystemCall %ld called with %ld, %ld, %ld\n", regs.orig_rax, regs.rsi, regs.rdx, regs.r10);
                     in = 1;
-                }
+                //}
             }
             else {
                 if (regs.orig_rax == 39){
@@ -57,10 +58,11 @@ int main(int argc, char* argv[]) {
         if (WIFEXITED(status) && !WEXITSTATUS(status)) {
             /* the program terminated normally and executed successfully */
             //system("java HelloWorld");
+            printf("\n\n\n\n\n\n\n\n\n\n");
             char *command[] = {"java", "HelloWorld", NULL};
-            if(execvp("java", command) != 0){
+            /*if(execvp("java", command) != 0){
                 perror("execvp java");
-            }
+            }*/
             //check if fails
         }
 

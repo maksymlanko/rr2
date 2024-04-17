@@ -47,9 +47,11 @@ int wait_for_syscall(pid_t child) {
                 printf("Handled SIGTRAP, continuing...\n");
                 //ptrace(PTRACE_CONT, child, 0, 0);
                 ptrace(PTRACE_SYSCALL, child, 0, sig);
+                //return 0; // this make a syscall wrong syscall(435)=-1
             } else {
                 //ptrace(PTRACE_CONT, child, 0, sig);
                 ptrace(PTRACE_SYSCALL, child, 0, sig);
+                //return 0; // this reverses ptrace syscall_nr -> return order??
             }
         } else {
             printf("Unexpected status received\n");
@@ -61,7 +63,8 @@ int wait_for_syscall(pid_t child) {
 int do_trace(pid_t child) {
     int status, syscall, retval;
     waitpid(child, &status, 0);
-    ptrace(PTRACE_SETOPTIONS, child, NULL, PTRACE_O_TRACEFORK | PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACECLONE);
+    //ptrace(PTRACE_SETOPTIONS, child, NULL, PTRACE_O_TRACEFORK | PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACECLONE);
+    ptrace(PTRACE_SETOPTIONS, child, 0, PTRACE_O_TRACESYSGOOD);
 
     while (1) {
         if (wait_for_syscall(child) != 0) break;

@@ -91,10 +91,12 @@ int wait_for_syscall(pid_t child) {
         if (WIFSIGNALED(status))
             printf("signaled!!!!!!!");
         if (WIFSTOPPED(status)){
-            printf("signal: %d\n", WSTOPSIG(status));
+            printf("!!! Received signal: %d\n", WSTOPSIG(status));
+            ptrace(PTRACE_SYSCALL, child, 0, WSTOPSIG(status));
+            waitpid(child, &status, 0);
             //ptrace(PTRACE_SYSCALL, child, 0, 0);
             //ptrace(PTRACE_CONT, child, 0, SIGSEGV);
-            return 5;
+            return 0;
         }
         else
             printf("SAIU signal: \n");

@@ -8,16 +8,20 @@
 #include <errno.h>
 #include <string.h>
 #include <jni.h>
+#include "libwrapperexample.h"
 
 int do_child(int argc, char **argv);
 int do_trace(pid_t child);
 void callJavaProgram(int argc, char **argv);
+int callEntryPoint(int argc, char **argv);
+int open_files(int argc, char **argv);
 
 int main(int argc, char **argv) {
     pid_t child = fork();
     if (child == 0) {
         return do_child(argc-1, argv+1);
     } else {
+        //open_files(int argc, char **argv);
         return do_trace(child);
     }
 }
@@ -25,6 +29,21 @@ int main(int argc, char **argv) {
 int do_child(int argc, char **argv) {
     ptrace(PTRACE_TRACEME);
     kill(getpid(), SIGSTOP);
+    // ver pipe // sq com select
+
+    /*
+    int res = callEntryPoint(argc, argv);
+    printf("finished callEntryPoint\n\n");
+    
+    if (res != 0){
+        printf("StartedcallJavaProgram\n\n");
+        callJavaProgram(argc, argv);
+        printf("finished callJavaProgram\n\n");
+
+    }
+    */
+    
+
     callJavaProgram(argc, argv);
     return 0;
 }
@@ -62,6 +81,7 @@ int wait_for_syscall(pid_t child) {
 
 int do_trace(pid_t child) {
     int status, syscall, retval;
+    FILE *fptr = fopen("full.log", "w");
     waitpid(child, &status, 0);
     //ptrace(PTRACE_SETOPTIONS, child, NULL, PTRACE_O_TRACEFORK | PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACECLONE);
     ptrace(PTRACE_SETOPTIONS, child, 0, PTRACE_O_TRACESYSGOOD);
@@ -70,10 +90,13 @@ int do_trace(pid_t child) {
         if (wait_for_syscall(child) != 0) break;
         syscall = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * ORIG_RAX);
         fprintf(stderr, "syscall(%d) = ", syscall);
+        fprintf(fptr, "syscall(%d) = ", syscall);        
         if (wait_for_syscall(child) != 0) break;
         retval = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * RAX);
         fprintf(stderr, "%d\n", retval);
+        fprintf(fptr, "%d\n", retval);
     }
+    fclose(fptr); 
     return 0;
 }
 
@@ -97,7 +120,8 @@ void callJavaProgram(int argc, char **argv) {
         fprintf(stderr, "ERROR: JNI_CreateJavaVM() failed, error code: %d\n", rc);
         exit(EXIT_FAILURE);
     }
-    jclass cls = (*env)->FindClass(env, "HelloWorld");
+    //jclass cls = (*env)->FindClass(env, "HelloWorld");
+    jclass cls = (*env)->FindClass(env, "WrapperExample");
     if (cls == NULL) {
         fprintf(stderr, "ERROR: class not found !\n");
     } else {
@@ -114,3 +138,28 @@ void callJavaProgram(int argc, char **argv) {
     }
     (*jvm)->DestroyJavaVM(jvm);
 }
+
+
+/*
+int callEntryPoint(int argc, char **argv){
+    graal_isolate_t *isolate = NULL;
+    graal_isolatethread_t *thread = NULL;
+
+    if (graal_create_isolate(NULL, &isolate, &thread) != 0) {
+        fprintf(stderr, "initialization error\n");
+        return 1;
+    }
+
+    int result = run_c(thread, argv[1]);
+    printf("Return was %d\n", result);
+
+    graal_tear_down_isolate(thread);
+    return result;
+ }
+
+ int open_files(int argc, char **argv){
+    FILE *fptr;
+    fptr = fopen("jni.log", "w");
+    fclose(fptr);
+ }
+ */

@@ -20,11 +20,12 @@ int callEntryPoint(int argc, char **argv);
 
 int main(int argc, char **argv) {
 
-    
+    /*
     if (argc < 2) {
         printf("Usage: %s <program> [method...]\n", argv[0]);
         return 1;
     }
+    */
 
     pid_t child;
     int status;
@@ -49,6 +50,8 @@ int main(int argc, char **argv) {
         return 0;
 
     } else if (child > 0){
+            int status, syscall, retval;
+            FILE *fptr = fopen("entry.log", "w");
         //wait(&status);
         //wait(&status);
 
@@ -57,10 +60,12 @@ int main(int argc, char **argv) {
             ptrace(PTRACE_GETREGS, child, NULL, &regs);
             if (in == 0){
                 printf("SystemCall %ld called with %ld, %ld, %ld\n", regs.orig_rax, regs.rsi, regs.rdx, regs.r10);
+                fprintf(fptr, "syscall(%d) = ", regs.orig_rax);
                 in = 1;
             }
             else {
                 printf("Return was: %ld\n", regs.rax);
+                fprintf(fptr, "%d\n", regs.rax);
                 in = 0;
             }
 
@@ -71,6 +76,7 @@ int main(int argc, char **argv) {
             }
 
         } while (WIFSTOPPED(status));
+        fclose(fptr); 
     } else{
         perror("fork");
         return 1;

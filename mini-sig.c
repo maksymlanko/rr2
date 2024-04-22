@@ -15,13 +15,21 @@ int do_trace(pid_t child);
 void callJavaProgram(int argc, char **argv);
 int callEntryPoint(int argc, char **argv);
 int open_files(int argc, char **argv);
+static void my_sig_handler(int signo);
+void init_signal_handler();
+
+static volatile sig_atomic_t got_signal = 0;
+//static volatile FILE *fptr; // error
+FILE *fptr;
 
 int main(int argc, char **argv) {
     pid_t child = fork();
     if (child == 0) {
-        return do_child(argc-1, argv+1);
+        //return do_child(argc-1, argv+1);
+        return do_child(argc, argv);
     } else {
         //open_files(int argc, char **argv);
+        init_signal_handler();
         return do_trace(child);
     }
 }
@@ -31,20 +39,23 @@ int do_child(int argc, char **argv) {
     kill(getpid(), SIGSTOP);
     // ver pipe // sq com select
 
-    /*
+    
     int res = callEntryPoint(argc, argv);
     printf("finished callEntryPoint\n\n");
+
+    kill(getppid(), SIGUSR1);
+    
     
     if (res != 0){
-        printf("StartedcallJavaProgram\n\n");
-        callJavaProgram(argc, argv);
-        printf("finished callJavaProgram\n\n");
+        printf("StartedcallJavaProgram\n");
+        callJavaProgram(argc-1, argv+1);
+        printf("finished callJavaProgram\n");
 
     }
-    */
+    
     
 
-    callJavaProgram(argc, argv);
+    //callJavaProgram(argc, argv);
     return 0;
 }
 
@@ -67,7 +78,11 @@ int wait_for_syscall(pid_t child) {
                 //ptrace(PTRACE_CONT, child, 0, 0);
                 ptrace(PTRACE_SYSCALL, child, 0, sig);
                 //return 0; // this make a syscall wrong syscall(435)=-1
-            } else {
+            }/* else if (sig == SIGUSR1){
+                printf("Received SIGUSR1, continuing...\n");
+                fclose(fptr);
+                fptr = fopen("jvm.log", "w");
+            }*/ else {
                 //ptrace(PTRACE_CONT, child, 0, sig);
                 ptrace(PTRACE_SYSCALL, child, 0, sig);
                 //return 0; // this reverses ptrace syscall_nr -> return order??
@@ -81,7 +96,7 @@ int wait_for_syscall(pid_t child) {
 
 int do_trace(pid_t child) {
     int status, syscall, retval;
-    FILE *fptr = fopen("full.log", "w");
+    fptr = fopen("entry.log", "w");
     waitpid(child, &status, 0);
     //ptrace(PTRACE_SETOPTIONS, child, NULL, PTRACE_O_TRACEFORK | PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACECLONE);
     ptrace(PTRACE_SETOPTIONS, child, 0, PTRACE_O_TRACESYSGOOD);
@@ -140,7 +155,7 @@ void callJavaProgram(int argc, char **argv) {
 }
 
 
-/*
+
 int callEntryPoint(int argc, char **argv){
     graal_isolate_t *isolate = NULL;
     graal_isolatethread_t *thread = NULL;
@@ -150,6 +165,7 @@ int callEntryPoint(int argc, char **argv){
         return 1;
     }
 
+    printf("Argv[1]: %s\n", argv[1]);
     int result = run_c(thread, argv[1]);
     printf("Return was %d\n", result);
 
@@ -162,4 +178,24 @@ int callEntryPoint(int argc, char **argv){
     fptr = fopen("jni.log", "w");
     fclose(fptr);
  }
- */
+ 
+
+static void my_sig_handler(int signo){
+    //got_signal = 1; //functions below are NOT async-signal-safe , im only trying this way because of perf reasons
+    fclose(fptr);
+    fptr = fopen("jvm.log", "w");
+}
+
+void init_signal_handler(){
+    struct sigaction sa = {
+            .sa_handler = my_sig_handler,
+            .sa_flags = SA_RESTART, // or 0??
+            .sa_mask = 0,
+    };
+
+    if (sigaction(SIGUSR1, &sa, NULL) == -1) {
+        perror("sigaction");
+        exit(1);
+    }
+
+}

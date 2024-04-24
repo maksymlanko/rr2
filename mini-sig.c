@@ -97,9 +97,33 @@ int wait_for_syscall(pid_t child) {
 int do_trace(pid_t child) {
     int status, syscall, retval;
     fptr = fopen("entry.log", "w");
+    if (fptr == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
+
     waitpid(child, &status, 0);
     //ptrace(PTRACE_SETOPTIONS, child, NULL, PTRACE_O_TRACEFORK | PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACECLONE);
     ptrace(PTRACE_SETOPTIONS, child, 0, PTRACE_O_TRACESYSGOOD);
+
+    while (!got_signal) {
+        if (wait_for_syscall(child) != 0) break;
+        syscall = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * ORIG_RAX);
+        fprintf(stderr, "syscall(%d) = ", syscall);
+        fprintf(fptr, "syscall(%d) = ", syscall);        
+        if (wait_for_syscall(child) != 0) break;
+        retval = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * RAX);
+        fprintf(stderr, "%d\n", retval);
+        fprintf(fptr, "%d\n", retval);
+        fprintf(stderr, "entrei e sai\n\n\n\n");
+    }
+    
+    fclose(fptr);
+    fptr = fopen("jvm.log", "w");
+    if (fptr == NULL) {
+        perror("Error opening file");
+        return 1;
+    }
 
     while (1) {
         if (wait_for_syscall(child) != 0) break;
@@ -111,6 +135,7 @@ int do_trace(pid_t child) {
         fprintf(stderr, "%d\n", retval);
         fprintf(fptr, "%d\n", retval);
     }
+
     fclose(fptr); 
     return 0;
 }
@@ -181,9 +206,9 @@ int callEntryPoint(int argc, char **argv){
  
 
 static void my_sig_handler(int signo){
-    //got_signal = 1; //functions below are NOT async-signal-safe , im only trying this way because of perf reasons
-    fclose(fptr);
-    fptr = fopen("jvm.log", "w");
+    got_signal = 1; //functions below are NOT async-signal-safe , im only trying this way because of perf reasons
+    //fclose(fptr);
+    //fptr = fopen("jvm.log", "w");
 }
 
 void init_signal_handler(){

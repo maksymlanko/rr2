@@ -17,6 +17,6 @@ mini-sig: hello mini-sig.c
 clean:
 	rm -rf HelloWorld.class mini mini-sig
 
-
+# native-image --shared -o libwrapperexample WrapperExample
 #gcc -o mini-jni minitrace-jni.c -I/usr/lib/jvm/java-21-openjdk/include -I/usr/lib/jvm/java-21-openjdk/include/linux -L/usr/lib/jvm/java-21-openjdk/lib/server -ljvm
 #gcc -I ./ -L ./ -l wrapperexample -Wl,-rpath ./ -o WrapperExample

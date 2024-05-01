@@ -28,7 +28,11 @@ public class WrapperExample {
         try {
             String arg = CTypeConversion.toJavaString(cFilter);
             String[] mainArgs = new String[]{arg}; // Example arguments to main
+            // tentar signal ver se ja esta jvm inicializada
+            // podes experiemtnar com syscall e procura la
+            System.out.println("Entrei nr 2");
             ReflectionExample.main(mainArgs);
+            System.out.println("Sai"); // never printed because of crash
             return 0;
         } catch (RuntimeException e) {
             // Check if the cause is NoSuchMethodException

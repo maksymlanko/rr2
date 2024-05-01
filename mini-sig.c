@@ -35,15 +35,14 @@ int main(int argc, char **argv) {
 }
 
 int do_child(int argc, char **argv) {
-    ptrace(PTRACE_TRACEME);
-    kill(getpid(), SIGSTOP);
+    //ptrace(PTRACE_TRACEME);
+    //kill(getpid(), SIGSTOP);
     // ver pipe // sq com select
 
     
     int res = callEntryPoint(argc, argv);
-    printf("finished callEntryPoint\n\n");
-
     kill(getppid(), SIGUSR1);
+    printf("finished callEntryPoint\n\n");
     
     
     if (res != 0){
@@ -115,17 +114,50 @@ int do_trace(pid_t child) {
         retval = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * RAX);
         fprintf(stderr, "%d\n", retval);
         fprintf(fptr, "%d\n", retval);
-        fprintf(stderr, "entrei e sai\n\n\n\n");
     }
+    //init_signal_handler();
     
+    
+    
+    //ptrace(PTRACE_DETACH, child, 0, 0);
     fclose(fptr);
     fptr = fopen("jvm.log", "w");
     if (fptr == NULL) {
         perror("Error opening file");
         return 1;
     }
+    ptrace(PTRACE_CONT, child, 0, 0);
+    
+    sigset_t sigset;
+    sigemptyset(&sigset);
+    int signal;
+    sigaddset(&sigset, SIGUSR1);
 
-    while (1) {
+    waitpid(child, &status, 0);
+
+    if (WIFSTOPPED(status)) {
+            int sig = WSTOPSIG(status);
+            printf("The child was stopped by signal: %d\n", sig);
+            if (sig == SIGTRAP) {
+                printf("Handled SIGTRAP, continuing...\n");
+                //ptrace(PTRACE_CONT, child, 0, 0);
+                ptrace(PTRACE_SYSCALL, child, 0, sig);
+                //return 0; // this make a syscall wrong syscall(435)=-1
+            } else {
+                //ptrace(PTRACE_CONT, child, 0, sig);
+                ptrace(PTRACE_CONT, child, 0, sig);
+                //return 0; // this reverses ptrace syscall_nr -> return order??
+            }
+    }
+    //sigwait(&sigset, &signal);
+    
+    
+    pause();
+    //printf("hello\n");
+    //ptrace(PTRACE_ATTACH, child, 0, 0);
+    got_signal = 0; // something wrong here
+    //printf("got_signal: %d \n", got_signal);
+    while (!got_signal) {
         if (wait_for_syscall(child) != 0) break;
         syscall = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * ORIG_RAX);
         fprintf(stderr, "syscall(%d) = ", syscall);
@@ -161,7 +193,7 @@ void callJavaProgram(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
     //jclass cls = (*env)->FindClass(env, "HelloWorld");
-    jclass cls = (*env)->FindClass(env, "WrapperExample");
+    jclass cls = (*env)->FindClass(env, "ReflectionExample");
     if (cls == NULL) {
         fprintf(stderr, "ERROR: class not found !\n");
     } else {
@@ -173,7 +205,11 @@ void callJavaProgram(int argc, char **argv) {
             for (int i = 0; i < argc; i++) {
                 (*env)->SetObjectArrayElement(env, arr, i, (*env)->NewStringUTF(env, argv[i]));
             }
+            kill(getppid(), SIGUSR1);
+            kill(getpid(), SIGSTOP);
             (*env)->CallStaticVoidMethod(env, cls, mid, arr);
+            kill(getppid(), SIGUSR1);
+            //printf("killed\n");
         }
     }
     (*jvm)->DestroyJavaVM(jvm);
@@ -189,6 +225,10 @@ int callEntryPoint(int argc, char **argv){
         fprintf(stderr, "initialization error\n");
         return 1;
     }
+
+    //replace printf with signal to initiate recording
+    ptrace(PTRACE_TRACEME);
+    kill(getpid(), SIGSTOP);
 
     printf("Argv[1]: %s\n", argv[1]);
     int result = run_c(thread, argv[1]);
@@ -209,6 +249,16 @@ static void my_sig_handler(int signo){
     got_signal = 1; //functions below are NOT async-signal-safe , im only trying this way because of perf reasons
     //fclose(fptr);
     //fptr = fopen("jvm.log", "w");
+    struct sigaction sa = {
+            .sa_handler = my_sig_handler,
+            .sa_flags = SA_RESTART, // or 0??
+            .sa_mask = 0,
+    };
+
+    if (sigaction(SIGUSR1, &sa, NULL) == -1) {
+        perror("sigaction");
+        exit(1);
+    }
 }
 
 void init_signal_handler(){

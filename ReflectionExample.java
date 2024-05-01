@@ -5,6 +5,7 @@ import java.lang.reflect.InvocationTargetException;
 public class ReflectionExample {
 
     public static void main(String[] args) {
+        System.out.println("We have entered ReflectionExample.");
 
         // Check if a method name has been provided as an argument
         if (args.length < 1) {
@@ -27,6 +28,7 @@ public class ReflectionExample {
 
             // Invoke the method dynamically on the obj instance
             method.invoke(obj); // Invoke method with no arguments
+            System.out.println("We are leaving ReflectionExample.");
         } catch (NoSuchMethodException e) {
             System.out.println("Method not found: " + methodName);
             // Wrap and rethrow the exception

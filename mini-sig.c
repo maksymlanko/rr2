@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/reg.h>
+#include <sys/user.h>
 #include <jni.h>
 #include "libwrapperexample.h"
 
@@ -104,14 +106,19 @@ int do_trace(pid_t child) {
     waitpid(child, &status, 0);
     //ptrace(PTRACE_SETOPTIONS, child, NULL, PTRACE_O_TRACEFORK | PTRACE_O_TRACESYSGOOD | PTRACE_O_TRACECLONE);
     ptrace(PTRACE_SETOPTIONS, child, 0, PTRACE_O_TRACESYSGOOD);
+    struct user_regs_struct regs;
 
     while (!got_signal) {
         if (wait_for_syscall(child) != 0) break;
-        syscall = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * ORIG_RAX);
+        //syscall = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * ORIG_RAX);
+        ptrace(PTRACE_GETREGS, child, NULL, &regs);
+        syscall = regs.orig_rax;
         fprintf(stderr, "syscall(%d) = ", syscall);
         fprintf(fptr, "syscall(%d) = ", syscall);        
         if (wait_for_syscall(child) != 0) break;
-        retval = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * RAX);
+        //retval = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * RAX);
+        ptrace(PTRACE_GETREGS, child, NULL, &regs);
+        retval = regs.rax;
         fprintf(stderr, "%d\n", retval);
         fprintf(fptr, "%d\n", retval);
     }
@@ -159,14 +166,19 @@ int do_trace(pid_t child) {
     //printf("got_signal: %d \n", got_signal);
     while (!got_signal) {
         if (wait_for_syscall(child) != 0) break;
-        syscall = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * ORIG_RAX);
+        //syscall = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * ORIG_RAX);
+        ptrace(PTRACE_GETREGS, child, NULL, &regs);
+        syscall = regs.orig_rax;
         fprintf(stderr, "syscall(%d) = ", syscall);
         fprintf(fptr, "syscall(%d) = ", syscall);        
         if (wait_for_syscall(child) != 0) break;
-        retval = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * RAX);
+        //retval = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * RAX);
+        ptrace(PTRACE_GETREGS, child, NULL, &regs);
+        retval = regs.rax;
         fprintf(stderr, "%d\n", retval);
         fprintf(fptr, "%d\n", retval);
     }
+    ptrace(PTRACE_DETACH, child, 0, 0);
 
     fclose(fptr); 
     return 0;
@@ -230,7 +242,7 @@ int callEntryPoint(int argc, char **argv){
     ptrace(PTRACE_TRACEME);
     kill(getpid(), SIGSTOP);
 
-    printf("Argv[1]: %s\n", argv[1]);
+    //printf("Argv[1]: %s\n", argv[1]);
     int result = run_c(thread, argv[1]);
     printf("Return was %d\n", result);
 

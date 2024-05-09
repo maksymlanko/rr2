@@ -113,8 +113,8 @@ int do_trace(pid_t child) {
         //syscall = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * ORIG_RAX);
         ptrace(PTRACE_GETREGS, child, NULL, &regs);
         syscall = regs.orig_rax;
-        fprintf(stderr, "syscall(%d) = ", syscall);
-        fprintf(fptr, "syscall(%d) = ", syscall);        
+        fprintf(stderr, "syscall(%d) {%d, %d, %d, %d, %d, %d} = ", syscall, regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
+        fprintf(fptr, "syscall(%d) {%d, %d, %d, %d, %d, %d} = ", syscall, regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);     
         if (wait_for_syscall(child) != 0) break;
         //retval = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * RAX);
         ptrace(PTRACE_GETREGS, child, NULL, &regs);
@@ -169,8 +169,8 @@ int do_trace(pid_t child) {
         //syscall = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * ORIG_RAX);
         ptrace(PTRACE_GETREGS, child, NULL, &regs);
         syscall = regs.orig_rax;
-        fprintf(stderr, "syscall(%d) = ", syscall);
-        fprintf(fptr, "syscall(%d) = ", syscall);        
+        fprintf(stderr, "syscall(%d) {%d, %d, %d, %d, %d, %d} = ", syscall, regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
+        fprintf(fptr, "syscall(%d) {%d, %d, %d, %d, %d, %d} = ", syscall, regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);    
         if (wait_for_syscall(child) != 0) break;
         //retval = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * RAX);
         ptrace(PTRACE_GETREGS, child, NULL, &regs);

@@ -11,6 +11,7 @@
 #include <sys/user.h>
 #include <jni.h>
 #include "libwrapperexample.h"
+#include "syscall_args.h"
 
 int do_child(int argc, char **argv);
 int do_trace(pid_t child);
@@ -19,6 +20,7 @@ int callEntryPoint(int argc, char **argv);
 int open_files(int argc, char **argv);
 static void my_sig_handler(int signo);
 void init_signal_handler();
+void print_syscall(int syscall, long regs[6]);
 
 static volatile sig_atomic_t got_signal = 0;
 //static volatile FILE *fptr; // error
@@ -112,9 +114,11 @@ int do_trace(pid_t child) {
         if (wait_for_syscall(child) != 0) break;
         //syscall = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * ORIG_RAX);
         ptrace(PTRACE_GETREGS, child, NULL, &regs);
+        long temp_regs[6] = {regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9};  // Example register values
         syscall = regs.orig_rax;
-        fprintf(stderr, "syscall(%d) {%d, %d, %d, %d, %d, %d} = ", syscall, regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
-        fprintf(fptr, "syscall(%d) {%d, %d, %d, %d, %d, %d} = ", syscall, regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);     
+        print_syscall(syscall, temp_regs);
+        //fprintf(stderr, "syscall(%d) {%d, %d, %d, %d, %d, %d} = ", syscall, regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
+        //fprintf(fptr, "syscall(%d) {%d, %d, %d, %d, %d, %d} = ", syscall, regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);     
         if (wait_for_syscall(child) != 0) break;
         //retval = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * RAX);
         ptrace(PTRACE_GETREGS, child, NULL, &regs);
@@ -168,9 +172,11 @@ int do_trace(pid_t child) {
         if (wait_for_syscall(child) != 0) break;
         //syscall = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * ORIG_RAX);
         ptrace(PTRACE_GETREGS, child, NULL, &regs);
+        long temp_regs[6] = {regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9};  // Example register values
         syscall = regs.orig_rax;
-        fprintf(stderr, "syscall(%d) {%d, %d, %d, %d, %d, %d} = ", syscall, regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
-        fprintf(fptr, "syscall(%d) {%d, %d, %d, %d, %d, %d} = ", syscall, regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);    
+        print_syscall(syscall, temp_regs);
+        //fprintf(stderr, "syscall(%d) {%d, %d, %d, %d, %d, %d} = ", syscall, regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
+        //fprintf(fptr, "syscall(%d) {%d, %d, %d, %d, %d, %d} = ", syscall, regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9); 
         if (wait_for_syscall(child) != 0) break;
         //retval = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * RAX);
         ptrace(PTRACE_GETREGS, child, NULL, &regs);
@@ -285,4 +291,43 @@ void init_signal_handler(){
         exit(1);
     }
 
+}
+
+void print_syscall(int syscall, long regs[6]) {
+    char format[100]; // Buffer for the format string
+    int i;
+
+    // Start building the format string
+    strcpy(format, "syscall(%d) {");
+    
+    // Append the right number of %d's, based on args_len[syscall]
+    for (i = 0; i < args_len[syscall]; i++) {
+        strcat(format, "%d, ");
+    }
+    
+    // Remove the last comma and space if there were any %d added
+    if (args_len[syscall] > 0) {
+        format[strlen(format) - 2] = '\0'; // Cut off the last ", "
+    }
+    
+    // Finish the format string
+    strcat(format, "} = ");
+    
+    // Use fprintf to print to stdout
+    fprintf(stderr, format, syscall,
+            args_len[syscall] > 0 ? regs[0] : 0,
+            args_len[syscall] > 1 ? regs[1] : 0,
+            args_len[syscall] > 2 ? regs[2] : 0,
+            args_len[syscall] > 3 ? regs[3] : 0,
+            args_len[syscall] > 4 ? regs[4] : 0,
+            args_len[syscall] > 5 ? regs[5] : 0);
+
+    // Use fprintf to print to the file
+    fprintf(fptr, format, syscall,
+            args_len[syscall] > 0 ? regs[0] : 0,
+            args_len[syscall] > 1 ? regs[1] : 0,
+            args_len[syscall] > 2 ? regs[2] : 0,
+            args_len[syscall] > 3 ? regs[3] : 0,
+            args_len[syscall] > 4 ? regs[4] : 0,
+            args_len[syscall] > 5 ? regs[5] : 0);
 }

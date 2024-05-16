@@ -10,7 +10,8 @@
 #include <sys/reg.h>
 #include <sys/user.h>
 #include <jni.h>
-#include "libwrapperexample.h"
+//#include "libwrapperexample.h"
+#include "libmd5.h"
 #include "syscall_args.h"
 
 int do_child(int argc, char **argv);
@@ -200,7 +201,7 @@ void callJavaProgram(int argc, char **argv) {
     options[2].optionString = "-XX:+UseSerialGC";
     options[3].optionString = "-XX:+ReduceSignalUsage";
     options[4].optionString = "-XX:+DisableAttachMechanism";
-    vm_args.version = JNI_VERSION_1_6;
+    vm_args.version = JNI_VERSION_1_6; //upgrade later !!
     vm_args.nOptions = 5;
     vm_args.options = options;
     vm_args.ignoreUnrecognized = JNI_FALSE;

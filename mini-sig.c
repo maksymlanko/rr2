@@ -55,6 +55,8 @@ int do_child(int argc, char **argv) {
         callJavaProgram(argc-1, argv+1);
         printf("finished callJavaProgram\n");
 
+    } else {
+        kill(getppid(), SIGKILL);
     }
     
     

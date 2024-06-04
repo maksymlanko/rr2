@@ -22,6 +22,7 @@ int open_files(int argc, char **argv);
 static void my_sig_handler(int signo);
 void init_signal_handler();
 void print_syscall(int syscall, long regs[6]);
+void getdata(pid_t child, long addr, char *str, int len);
 
 static volatile sig_atomic_t got_signal = 0;
 //static volatile FILE *fptr; // error
@@ -101,6 +102,7 @@ int wait_for_syscall(pid_t child) {
 }
 
 int do_trace(pid_t child) {
+    char str[1000] = {'\0'};
     int status, syscall, retval;
     fptr = fopen("entry.log", "w");
     if (fptr == NULL) {
@@ -128,6 +130,13 @@ int do_trace(pid_t child) {
         retval = regs.rax;
         fprintf(stderr, "%d\n", retval);
         fprintf(fptr, "%d\n", retval);
+        
+        if (regs.orig_rax == 0 && regs.rax != 0){
+            char *new_str;
+            new_str = (char *) calloc((regs.rdx + 1), sizeof(char));
+            getdata(child, regs.rsi, new_str, regs.rax);
+            printf("PTRACE has read:\"%s\"\n", new_str);
+        }
     }
     //init_signal_handler();
     
@@ -301,11 +310,12 @@ void print_syscall(int syscall, long regs[6]) {
     int i;
 
     // Start building the format string
-    strcpy(format, "syscall(%d) {");
+    //strcpy(format, "syscall(%d) {");
+    strcpy(format, "syscall(%lu) {");
     
     // Append the right number of %d's, based on args_len[syscall]
     for (i = 0; i < args_len[syscall]; i++) {
-        strcat(format, "%d, ");
+        strcat(format, "%lu, ");
     }
     
     // Remove the last comma and space if there were any %d added
@@ -333,4 +343,27 @@ void print_syscall(int syscall, long regs[6]) {
             args_len[syscall] > 3 ? regs[3] : 0,
             args_len[syscall] > 4 ? regs[4] : 0,
             args_len[syscall] > 5 ? regs[5] : 0);
+}
+
+void getdata(pid_t child, long addr, char *str, int len) {
+    int i, j;
+    union u {
+        long val;
+        char chars[long_size];
+    } data;
+    i = 0;
+    j = len / long_size;
+    char *laddr = str;
+    while (i < j) {
+        data.val = ptrace(PTRACE_PEEKDATA, child, addr + i * long_size, NULL);
+        memcpy(laddr, data.chars, long_size);
+        ++i;
+        laddr += long_size;
+    }
+    j = len % long_size;
+    if (j != 0) {
+        data.val = ptrace(PTRACE_PEEKDATA, child, addr + i * long_size, NULL);
+        memcpy(laddr, data.chars, j);
+    }
+    str[len] = '\0';
 }

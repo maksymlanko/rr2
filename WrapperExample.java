@@ -10,7 +10,8 @@
 public class WrapperExample {
     public static void main(String[] args) {
         try {
-            ReflectionExample.main(args);
+            //ReflectionExample.main(args);
+            MD5Checksum.main(args);
         } catch (RuntimeException e) {
             // Check if the cause is NoSuchMethodException
             if (e.getCause() instanceof NoSuchMethodException) {
@@ -31,7 +32,10 @@ public class WrapperExample {
             // tentar signal ver se ja esta jvm inicializada
             // podes experiemtnar com syscall e procura la
             System.out.println("Entrei nr 2");
-            ReflectionExample.main(mainArgs);
+            //ReflectionExample.main(mainArgs);
+            //MD5Checksum.main(mainArgs);
+            //md5reflection.main(mainArgs);
+            md6reflection.main(mainArgs);
             System.out.println("Sai"); // never printed because of crash
             return 0;
         } catch (RuntimeException e) {

@@ -10,9 +10,11 @@
 #include <sys/reg.h>
 #include <sys/user.h>
 #include <jni.h>
-//#include "libwrapperexample.h"
-#include "libmd5.h"
+#include "libwrapperexample.h"
+//#include "libmd5.h"
 #include "syscall_args.h"
+
+#define long_size sizeof(long)
 
 int do_child(int argc, char **argv);
 int do_trace(pid_t child);
@@ -23,6 +25,7 @@ static void my_sig_handler(int signo);
 void init_signal_handler();
 void print_syscall(int syscall, long regs[6]);
 void getdata(pid_t child, long addr, char *str, int len);
+void putdata(pid_t child, long addr, char *str, int len);
 
 static volatile sig_atomic_t got_signal = 0;
 //static volatile FILE *fptr; // error
@@ -131,11 +134,11 @@ int do_trace(pid_t child) {
         fprintf(stderr, "%d\n", retval);
         fprintf(fptr, "%d\n", retval);
         
-        if (regs.orig_rax == 0 && regs.rax != 0){
-            char *new_str;
-            new_str = (char *) calloc((regs.rdx + 1), sizeof(char));
-            getdata(child, regs.rsi, new_str, regs.rax);
-            printf("PTRACE has read:\"%s\"\n", new_str);
+        if (regs.orig_rax == 0 && regs.rax != 0){       // will read till 1024 // use strncat after
+            char *copy_read;
+            copy_read = (char *) calloc((regs.rdx + 1), sizeof(char));
+            getdata(child, regs.rsi, copy_read, regs.rax);
+            printf("PTRACE has read:\"%s\"\n", copy_read);
         }
     }
     //init_signal_handler();
@@ -195,6 +198,17 @@ int do_trace(pid_t child) {
         retval = regs.rax;
         fprintf(stderr, "%d\n", retval);
         fprintf(fptr, "%d\n", retval);
+        int temp_counter = 0;
+        if (regs.orig_rax == 0){       // will read till 1024 // use strncat after
+            temp_counter++;
+            if (temp_counter == 10){
+                char *copy_read;
+                copy_read = (char *) calloc((regs.rdx + 1), sizeof(char));
+                getdata(child, regs.rsi, copy_read, regs.rax);
+                printf("PTRACE has read:\"%s\"\n", copy_read);
+        }
+            }
+
     }
     ptrace(PTRACE_DETACH, child, 0, 0);
 
@@ -206,14 +220,14 @@ void callJavaProgram(int argc, char **argv) {
     JavaVM *jvm;
     JNIEnv *env;
     JavaVMInitArgs vm_args;
-    JavaVMOption* options = malloc(5 * sizeof(JavaVMOption));
-    options[0].optionString = "-Djava.class.path=.";
-    options[1].optionString = "-Xint";
-    options[2].optionString = "-XX:+UseSerialGC";
-    options[3].optionString = "-XX:+ReduceSignalUsage";
-    options[4].optionString = "-XX:+DisableAttachMechanism";
-    vm_args.version = JNI_VERSION_1_6; //upgrade later !!
-    vm_args.nOptions = 5;
+    JavaVMOption* options = malloc(4 * sizeof(JavaVMOption));
+    //options[0].optionString = "-Djava.class.path=.";
+    options[0].optionString = "-Xint";
+    options[1].optionString = "-XX:+UseSerialGC";
+    options[2].optionString = "-XX:+ReduceSignalUsage";
+    options[3].optionString = "-XX:+DisableAttachMechanism";
+    vm_args.version = JNI_VERSION_21; //upgrade later !!
+    vm_args.nOptions = 4;
     vm_args.options = options;
     vm_args.ignoreUnrecognized = JNI_FALSE;
     jint rc = JNI_CreateJavaVM(&jvm, (void**)&env, &vm_args);
@@ -223,7 +237,9 @@ void callJavaProgram(int argc, char **argv) {
         exit(EXIT_FAILURE);
     }
     //jclass cls = (*env)->FindClass(env, "HelloWorld");
-    jclass cls = (*env)->FindClass(env, "ReflectionExample");
+    //jclass cls = (*env)->FindClass(env, "ReflectionExample");
+    //jclass cls = (*env)->FindClass(env, "MD5Checksum");
+    jclass cls = (*env)->FindClass(env, "md6reflection");
     if (cls == NULL) {
         fprintf(stderr, "ERROR: class not found !\n");
     } else {
@@ -260,8 +276,9 @@ int callEntryPoint(int argc, char **argv){
     ptrace(PTRACE_TRACEME);
     kill(getpid(), SIGSTOP);
 
-    //printf("Argv[1]: %s\n", argv[1]);
+    printf("Argv[1]: %s\n", argv[1]);
     int result = run_c(thread, argv[1]);
+    //int result = run_c(thread, CTypeConversion.toJavaString(""));
     printf("Return was %d\n", result);
 
     graal_tear_down_isolate(thread);
@@ -366,4 +383,28 @@ void getdata(pid_t child, long addr, char *str, int len) {
         memcpy(laddr, data.chars, j);
     }
     str[len] = '\0';
+}
+
+void putdata(pid_t child, long addr, char *str, int len) {
+    int i, j;
+    union u {
+        long val;
+        char chars[long_size];
+    } data;
+    i = 0;
+    j = len / long_size;
+    char *laddr = str;
+    while (i < j) {
+        memcpy(data.chars, laddr, long_size);
+        ptrace(PTRACE_POKEDATA, child, addr + i * long_size, data.val);
+        ++i;
+        laddr += long_size;
+    }
+    j = len % long_size;
+    if (j != 0) {
+        // Clear the buffer portion that might be written with previous data
+        memset(data.chars, 0, long_size);
+        memcpy(data.chars, laddr, j);
+        ptrace(PTRACE_POKEDATA, child, addr + i * long_size, data.val);
+    }
 }

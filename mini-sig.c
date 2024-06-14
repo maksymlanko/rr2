@@ -30,6 +30,8 @@ void putdata(pid_t child, long addr, char *str, int len);
 static volatile sig_atomic_t got_signal = 0;
 //static volatile FILE *fptr; // error
 FILE *fptr;
+char *copy_read;
+
 
 int main(int argc, char **argv) {
     pid_t child = fork();
@@ -135,7 +137,7 @@ int do_trace(pid_t child) {
         fprintf(fptr, "%d\n", retval);
         
         if (regs.orig_rax == 0 && regs.rax != 0){       // will read till 1024 // use strncat after
-            char *copy_read;
+            //char *copy_read;
             copy_read = (char *) calloc((regs.rdx + 1), sizeof(char));
             getdata(child, regs.rsi, copy_read, regs.rax);
             printf("PTRACE has read:\"%s\"\n", copy_read);
@@ -183,6 +185,7 @@ int do_trace(pid_t child) {
     //ptrace(PTRACE_ATTACH, child, 0, 0);
     got_signal = 0; // something wrong here
     //printf("got_signal: %d \n", got_signal);
+    int temp_counter = 0;
     while (!got_signal) {
         if (wait_for_syscall(child) != 0) break;
         //syscall = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * ORIG_RAX);
@@ -198,16 +201,26 @@ int do_trace(pid_t child) {
         retval = regs.rax;
         fprintf(stderr, "%d\n", retval);
         fprintf(fptr, "%d\n", retval);
-        int temp_counter = 0;
         if (regs.orig_rax == 0){       // will read till 1024 // use strncat after
-            temp_counter++;
-            if (temp_counter == 10){
-                char *copy_read;
+            if (temp_counter == 0){
+                printf("TESTE %d\n\n\n\n", temp_counter);
+                
+                //char *copy_read;
+                //copy_read = (char *) calloc((regs.rdx + 1), sizeof(char));
+                //getdata(child, regs.rsi, copy_read, regs.rax);
+                char test_str[16] = "Ola sou um teste";
+                printf("test_str: %s\n", test_str);
+                putdata(child, regs.rsi, test_str, 18); // 16 is full size + \0
+                //printf("PTRACE has read:\"%s\"\n", copy_read);
+                
+                // test if putdata worked
                 copy_read = (char *) calloc((regs.rdx + 1), sizeof(char));
                 getdata(child, regs.rsi, copy_read, regs.rax);
                 printf("PTRACE has read:\"%s\"\n", copy_read);
-        }
             }
+            temp_counter++;
+            printf("temp_counter updated to = %d\n", temp_counter);
+        }
 
     }
     ptrace(PTRACE_DETACH, child, 0, 0);

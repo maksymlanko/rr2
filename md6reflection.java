@@ -22,10 +22,22 @@ public class md6reflection {
 
         String methodName = args[0];
 
+        String filePath = "hash.txt";
+        byte[] fileBytes = null;
+        try {
+            fileBytes = readFile(filePath);
+        } catch (IOException e) {
+            System.err.println("Error reading file: " + e.getMessage());
+            e.printStackTrace();
+            return; // Exit if there's an error reading the file
+        }
+
+	System.out.println("Contents of " + filePath + ":");
+	System.out.println(new String(fileBytes));
         try {
             md6reflection obj = new md6reflection();
-            Method method = md6reflection.class.getMethod(methodName, new Class<?>[0]); 
-            method.invoke(obj); 
+            Method method = md6reflection.class.getMethod(methodName, new Class<?>[0]);
+            method.invoke(obj);
         } catch (NoSuchMethodException e) {
             System.out.println("Method not found: " + methodName);
             throw new RuntimeException(e);
@@ -34,9 +46,7 @@ public class md6reflection {
             throw new RuntimeException(e);
         }
 
-        String filePath = "hash.txt";
         try {
-            byte[] fileBytes = readFile(filePath);
             Method method = md6reflection.class.getMethod("getMD6Checksum", byte[].class);
             String md6Checksum = (String) method.invoke(null, (Object) fileBytes);
             System.out.println("MD6 checksum of " + filePath + " is: " + md6Checksum);

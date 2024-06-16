@@ -35,7 +35,13 @@ public class WrapperExample {
             //ReflectionExample.main(mainArgs);
             //MD5Checksum.main(mainArgs);
             //md5reflection.main(mainArgs);
-            md6reflection.main(mainArgs);
+
+            if (mainArgs[0] == null) {
+                String[] nullArr = new String[] {};
+                md6reflection.main(nullArr);
+            } else {
+                md6reflection.main(mainArgs);                
+            }
             System.out.println("Sai"); // never printed because of crash
             return 0;
         } catch (RuntimeException e) {

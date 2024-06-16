@@ -33,6 +33,11 @@ public class md6reflection {
         }
 
 	System.out.println("Contents of " + filePath + ":");
+    
+    byte[] bytes = new String(fileBytes).getBytes();
+    for(byte b:bytes)
+        System.out.println(b);
+
 	System.out.println(new String(fileBytes));
         try {
             md6reflection obj = new md6reflection();

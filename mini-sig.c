@@ -190,34 +190,69 @@ int do_trace(pid_t child) {
         if (wait_for_syscall(child) != 0) break;
         //syscall = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * ORIG_RAX);
         ptrace(PTRACE_GETREGS, child, NULL, &regs);
+
+        if (regs.orig_rax == 0){
+                //regs.rdx = 16;
+        }
+
         long temp_regs[6] = {regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9};  // Example register values
         syscall = regs.orig_rax;
+
         print_syscall(syscall, temp_regs);
-        //fprintf(stderr, "syscall(%d) {%d, %d, %d, %d, %d, %d} = ", syscall, regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
-        //fprintf(fptr, "syscall(%d) {%d, %d, %d, %d, %d, %d} = ", syscall, regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9); 
-        if (wait_for_syscall(child) != 0) break;
-        //retval = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * RAX);
-        ptrace(PTRACE_GETREGS, child, NULL, &regs);
-        retval = regs.rax;
-        fprintf(stderr, "%d\n", retval);
-        fprintf(fptr, "%d\n", retval);
-        if (regs.orig_rax == 0){       // will read till 1024 // use strncat after
+        if (regs.orig_rax == 0){
             if (temp_counter == 0){
-                printf("TESTE %d\n\n\n\n", temp_counter);
+                //printf("TESTE %d\n\n\n\n", temp_counter);
                 
                 //char *copy_read;
                 //copy_read = (char *) calloc((regs.rdx + 1), sizeof(char));
                 //getdata(child, regs.rsi, copy_read, regs.rax);
                 char test_str[16] = "Ola sou um teste";
-                printf("test_str: %s\n", test_str);
-                putdata(child, regs.rsi, test_str, 18); // 16 is full size + \0
+                //printf("test_str: %s\n", test_str);
+
+                //putdata(child, regs.rsi, test_str, 16); // 16 is full size + \0
+                putdata(child, regs.rsi, copy_read, 43); // 16 is full size + \0
+                
                 //printf("PTRACE has read:\"%s\"\n", copy_read);
+
+                //ptrace(PTRACE_GETREGS, child, NULL, &regs);
+                regs.orig_rax = 39;
+                //regs.orig_rax = -1;
+                //regs.rax = 16;
+                //regs.rip += 6;  // 1 or 6 doesnt fail
+                ptrace(PTRACE_SETREGS, child, NULL, &regs);
                 
                 // test if putdata worked
                 copy_read = (char *) calloc((regs.rdx + 1), sizeof(char));
-                getdata(child, regs.rsi, copy_read, regs.rax);
-                printf("PTRACE has read:\"%s\"\n", copy_read);
+                getdata(child, regs.rsi, copy_read, regs.rdx); //rdx not rax for size
+                printf("PTRACE has read 1 :\"%s\"\n", copy_read);
             }
+        }
+
+            
+        //fprintf(stderr, "syscall(%d) {%d, %d, %d, %d, %d, %d} = ", syscall, regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
+        //fprintf(fptr, "syscall(%d) {%d, %d, %d, %d, %d, %d} = ", syscall, regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9); 
+        if (wait_for_syscall(child) != 0) break;
+        //retval = ptrace(PTRACE_PEEKUSER, child, sizeof(long) * RAX);
+        ptrace(PTRACE_GETREGS, child, NULL, &regs);
+        if (regs.orig_rax == 39){
+            //regs.rax = 16;
+            regs.rax = 43;
+        }
+        ptrace(PTRACE_SETREGS, child, NULL, &regs);
+        retval = regs.rax;
+        fprintf(stderr, "%d\n", retval);
+        fprintf(fptr, "%d\n", retval);
+        if (regs.orig_rax == 39){     // HAD TO CHANGE TO 39 because its no longer a read...  // will read till 1024 // use strncat after
+            if (temp_counter == 0){
+                //regs.rax = 16;
+                //ptrace(PTRACE_SETREGS, child, NULL, &regs);
+                printf("devia de printar\n");
+            }
+
+            copy_read = (char *) calloc((regs.rdx + 1), sizeof(char));
+            getdata(child, regs.rsi, copy_read, regs.rax);
+            printf("PTRACE has read 2 :\"%s\"\n", copy_read);
+
             temp_counter++;
             printf("temp_counter updated to = %d\n", temp_counter);
         }

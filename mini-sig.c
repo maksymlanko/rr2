@@ -52,7 +52,7 @@ int do_child(int argc, char **argv) {
 
     
     int res = callEntryPoint(argc, argv);
-    kill(getppid(), SIGUSR1);
+    
     printf("finished callEntryPoint\n\n");
     
     
@@ -324,9 +324,14 @@ int callEntryPoint(int argc, char **argv){
     ptrace(PTRACE_TRACEME);
     kill(getpid(), SIGSTOP);
 
-    printf("Argv[1]: %s\n", argv[1]);
+    //printf("Argv[1]: %s\n", argv[1]);
     int result = run_c(thread, argv[1]);
     //int result = run_c(thread, CTypeConversion.toJavaString(""));
+
+    if (result == -1){
+        kill(getppid(), SIGUSR1);
+    }
+    
     printf("Return was %d\n", result);
 
     graal_tear_down_isolate(thread);

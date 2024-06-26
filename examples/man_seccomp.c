@@ -193,7 +193,7 @@ installNotifyFilter(void)
         X86_64_CHECK_ARCH_AND_LOAD_SYSCALL_NR,
 
         /* mkdir() triggers notification to user-space supervisor */
-
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_getpid, 1, 0),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_mkdir, 0, 1),
         BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_USER_NOTIF),
 
@@ -289,7 +289,8 @@ targetProcess(int sockPair[2], char *argv[])
         else
             printf("T: SUCCESS: mkdir(2) returned %d\n", s);
     }
-
+    int pid = getpid();
+    printf("\nT: pid returned %d\n", pid);
     printf("\nT: terminating\n");
     exit(EXIT_SUCCESS);
 }
@@ -460,9 +461,31 @@ handleNotifications(int notifyFd)
             generate notifications for other system calls. */
 
         if (req->data.nr != SYS_mkdir) {
+            /*
             printf("\tS: notification contained unexpected "
                     "system call number; bye!!!\n");
             exit(EXIT_FAILURE);
+            */
+            if (req->data.nr == SYS_getpid) {
+                resp->val = 1234;
+                resp->id = req->id;     /* Response includes notification ID */
+                resp->flags = 0;
+                printf("\tS: success! spoofed return of getpid() = %lld\n",
+                    resp->val);
+                printf("\tS: sending response "
+                    "(flags = %#x; val = %lld; error = %d)\n",
+                    resp->flags, resp->val, resp->error);
+
+                if (ioctl(notifyFd, SECCOMP_IOCTL_NOTIF_SEND, resp) == -1) {
+                    if (errno == ENOENT)
+                        printf("\tS: response failed with ENOENT; "
+                                "perhaps target process's syscall was "
+                                "interrupted by a signal?\n");
+                    else
+                        perror("ioctl-SECCOMP_IOCTL_NOTIF_SEND");
+                }
+                continue;
+            }
         }
 
         pathOK = getTargetPathname(req, notifyFd, 0, path, sizeof(path));

@@ -21,8 +21,11 @@
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
+#include <pthread.h>
 
 #define ARRAY_SIZE(arr)  (sizeof(arr) / sizeof((arr)[0]))
+
+int               sockPair[2];
 
 /* Send the file descriptor 'fd' over the connected UNIX domain socket
     'sockfd'. Returns 0 on success, or -1 on error. */
@@ -240,19 +243,14 @@ closeSocketPair(int sockPair[2])
     The function return value in the parent is the PID of the child
     process; the child does not return from this function. */
 
-static pid_t
-targetProcess(int sockPair[2], char *argv[])
+void *
+targetProcess(void *argv[])
 {
     int    notifyFd, s;
     pid_t  targetPid;
+    char   **arg;
 
-    targetPid = fork();
-
-    if (targetPid == -1)
-        err(EXIT_FAILURE, "fork");
-
-    if (targetPid > 0)          /* In parent, return PID of child */
-        return targetPid;
+    arg = (char **) argv;
 
     /* Child falls through to here */
 
@@ -271,16 +269,10 @@ targetProcess(int sockPair[2], char *argv[])
     if (sendfd(sockPair[0], notifyFd) == -1)
         err(EXIT_FAILURE, "sendfd");
 
-    /* Notification and socket FDs are no longer needed in target */
-
-    if (close(notifyFd) == -1)
-        err(EXIT_FAILURE, "close-target-notify-fd");
-
-    closeSocketPair(sockPair);
-
+    //printf("ap = %s\n", *arg);
     /* Perform a mkdir() call for each of the command-line arguments */
 
-    for (char **ap = argv; *ap != NULL; ap++) {
+    for (char **ap = arg; *ap != NULL; ap++) {
         printf("\nT: about to mkdir(\"%s\")\n", *ap);
 
         s = mkdir(*ap, 0700);
@@ -488,6 +480,9 @@ handleNotifications(int notifyFd)
             }
         }
 
+        printf("\tS: Arg0: %p, Arg1: %llo, Arg2: %llu, Arg3: %llu\n",
+            (int) req->data.args[0], req->data.args[1], req->data.args[2], req->data.args[3]);
+
         pathOK = getTargetPathname(req, notifyFd, 0, path, sizeof(path));
 
         /* Prepopulate some fields of the response */
@@ -590,8 +585,8 @@ supervisor(int sockPair[2])
 int
 main(int argc, char *argv[])
 {
-    int               sockPair[2];
     struct sigaction  sa;
+    pthread_t         tid;
 
     setbuf(stdout, NULL);
 
@@ -612,7 +607,7 @@ main(int argc, char *argv[])
         file descriptor onto 'sockPair[0]' and then calls mkdir(2) for
         each directory in the command-line arguments. */
 
-    (void) targetProcess(sockPair, &argv[optind]);
+    pthread_create(&tid, NULL, (void *) targetProcess, &argv[optind]);
 
     /* Catch SIGCHLD when the target terminates, so that the
         supervisor can also terminate. */

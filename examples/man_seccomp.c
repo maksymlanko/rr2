@@ -196,6 +196,7 @@ installNotifyFilter(void)
         X86_64_CHECK_ARCH_AND_LOAD_SYSCALL_NR,
 
         /* mkdir() triggers notification to user-space supervisor */
+        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_read, 2, 0),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_getpid, 1, 0),
         BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_mkdir, 0, 1),
         BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_USER_NOTIF),
@@ -283,6 +284,13 @@ targetProcess(void *argv[])
     }
     int pid = getpid();
     printf("\nT: pid returned %d\n", pid);
+
+    char buf[10];
+    //strncpy(buf, "abcdefg", 10);
+    printf("T: addr of buf: %p\n", &buf);
+    int numRead = read(STDIN_FILENO, buf, 9);
+    //buf[numRead] = '\0';
+    printf("T: read \"%s\"", buf);
     printf("\nT: terminating\n");
     exit(EXIT_SUCCESS);
 }
@@ -452,36 +460,55 @@ handleNotifications(int notifyFd)
             code in case the seccomp filter is later modified to
             generate notifications for other system calls. */
 
-        if (req->data.nr != SYS_mkdir) {
-            /*
-            printf("\tS: notification contained unexpected "
-                    "system call number; bye!!!\n");
-            exit(EXIT_FAILURE);
-            */
-            if (req->data.nr == SYS_getpid) {
-                resp->val = 1234;
-                resp->id = req->id;     /* Response includes notification ID */
-                resp->flags = 0;
-                printf("\tS: success! spoofed return of getpid() = %lld\n",
-                    resp->val);
-                printf("\tS: sending response "
-                    "(flags = %#x; val = %lld; error = %d)\n",
-                    resp->flags, resp->val, resp->error);
+        if (req->data.nr == SYS_getpid) {
+            resp->val = 1234;
+            resp->id = req->id;
+            resp->flags = 0;
+            printf("\tS: success! spoofed return of getpid() = %lld\n",
+                resp->val);
+            printf("\tS: sending response "
+                "(flags = %#x; val = %lld; error = %d)\n",
+                resp->flags, resp->val, resp->error);
 
-                if (ioctl(notifyFd, SECCOMP_IOCTL_NOTIF_SEND, resp) == -1) {
-                    if (errno == ENOENT)
-                        printf("\tS: response failed with ENOENT; "
-                                "perhaps target process's syscall was "
-                                "interrupted by a signal?\n");
-                    else
-                        perror("ioctl-SECCOMP_IOCTL_NOTIF_SEND");
-                }
-                continue;
+            if (ioctl(notifyFd, SECCOMP_IOCTL_NOTIF_SEND, resp) == -1) {
+                if (errno == ENOENT)
+                    printf("\tS: response failed with ENOENT; "
+                            "perhaps target process's syscall was "
+                            "interrupted by a signal?\n");
+                else
+                    perror("ioctl-SECCOMP_IOCTL_NOTIF_SEND");
             }
+            continue;
         }
+        if (req->data.nr == SYS_read){
+            printf("\tS: Arg0: %u, Arg1: %p, Arg2: %zu, Arg3: %llu\n",
+                (unsigned int) req->data.args[0], (intptr_t) req->data.args[1], req->data.args[2], req->data.args[3]);
 
-        printf("\tS: Arg0: %p, Arg1: %llo, Arg2: %llu, Arg3: %llu\n",
-            (int) req->data.args[0], req->data.args[1], req->data.args[2], req->data.args[3]);
+            intptr_t addr = req->data.args[1];
+            char *read_addr = (char *) addr;
+            char *test = "ola sou";
+            strncpy(read_addr, test, strlen(test)+1);            
+            printf("\tS: read_addr content = %s\n", read_addr);
+
+            resp->id = req->id;
+            resp->flags = 0;
+            resp->error = 0;
+            resp->val = strlen(test);
+
+            printf("\tS: sending response "
+                "(flags = %#x; val = %lld; error = %d)\n",
+                resp->flags, resp->val, resp->error);
+
+            if (ioctl(notifyFd, SECCOMP_IOCTL_NOTIF_SEND, resp) == -1) {
+                if (errno == ENOENT)
+                    printf("\tS: response failed with ENOENT; "
+                            "perhaps target process's syscall was "
+                            "interrupted by a signal?\n");
+                else
+                    perror("ioctl-SECCOMP_IOCTL_NOTIF_SEND");
+            }
+            continue;
+        }
 
         pathOK = getTargetPathname(req, notifyFd, 0, path, sizeof(path));
 
@@ -490,6 +517,10 @@ handleNotifications(int notifyFd)
         resp->id = req->id;     /* Response includes notification ID */
         resp->flags = 0;
         resp->val = 0;
+
+        printf("\tS: Arg0: %p, Arg1: %llo, Arg2: %zu, Arg3: %llu\n",
+            (int) req->data.args[0], req->data.args[1], req->data.args[2], req->data.args[3]);
+        // here we use cast to int because cast to intptr_t has 12 bytes instead of 8
 
         /* If getTargetPathname() failed, trigger an EINVAL error
             response (sending this response may yield an error if the

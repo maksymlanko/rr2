@@ -115,7 +115,7 @@ callEntryPoint(char **argv)
     if (graal_create_isolate(NULL, &isolate, &thread) != 0)
         err(EXIT_FAILURE, "graal_create_isolate");
 
-    int result = run_c(thread, argv[1]);
+    int result = run_c(thread, argv[0]);
     printf("T: native image returned %d\n", result);
     graal_tear_down_isolate(thread);
     return result;
@@ -143,7 +143,7 @@ targetProcess(void *argv[])
 
     pthread_mutex_unlock(&mutex_notifyfd);
 
-    //callEntryPoint(arg);
+    callEntryPoint(arg);
 
     /* Perform a mkdir() call for each of the command-line arguments */
     for (char **ap = arg; *ap != NULL; ap++) {
@@ -162,7 +162,7 @@ targetProcess(void *argv[])
     //strncpy(buf, "abcdefg", 10);
     printf("T: addr of buf: %p\n", &buf);
     int numRead = read(STDIN_FILENO, buf, 9);
-    //buf[numRead] = '\0';
+    buf[numRead] = '\0';
     printf("T: read \"%s\"", buf);
 
     printf("\nT: terminating\n");
@@ -350,9 +350,10 @@ handleNotifications(int notifyFd)
             continue;
         }
         if (req->data.nr == SYS_read){
-            printf("\tS: Arg0: %u, Arg1: %p, Arg2: %zu, Arg3: %llu\n",
+            printf("\tS: SYS_read Arg0: %u, Arg1: %p, Arg2: %zu, Arg3: %llu\n",
                 (unsigned int) req->data.args[0], (intptr_t) req->data.args[1], req->data.args[2], req->data.args[3]);
 
+            /*
             intptr_t addr = req->data.args[1];
             char *read_addr = (char *) addr;
             char *test = "ola sou";
@@ -363,6 +364,12 @@ handleNotifications(int notifyFd)
             resp->flags = 0;
             resp->error = 0;
             resp->val = strlen(test);
+            */
+            
+            resp->id = req->id;
+            resp->error = 0;
+            resp->val = 0;
+            resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
 
             printf("\tS: sending response "
                 "(flags = %#x; val = %lld; error = %d)\n",

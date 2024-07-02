@@ -25,138 +25,8 @@
 
 #define ARRAY_SIZE(arr)  (sizeof(arr) / sizeof((arr)[0]))
 
-int                 sockPair[2];
 int                 notifyFd;
 pthread_mutex_t     mutex_notifyfd;
-
-/* Send the file descriptor 'fd' over the connected UNIX domain socket
-    'sockfd'. Returns 0 on success, or -1 on error. */
-
-static int
-sendfd(int sockfd, int fd)
-{
-    int             data;
-    struct iovec    iov;
-    struct msghdr   msgh;
-    struct cmsghdr  *cmsgp;
-
-    /* Allocate a char array of suitable size to hold the ancillary data.
-        However, since this buffer is in reality a 'struct cmsghdr', use a
-        union to ensure that it is suitably aligned. */
-    union {
-        char   buf[CMSG_SPACE(sizeof(int))];
-                        /* Space large enough to hold an 'int' */
-        struct cmsghdr align;
-    } controlMsg;
-
-    /* The 'msg_name' field can be used to specify the address of the
-        destination socket when sending a datagram. However, we do not
-        need to use this field because 'sockfd' is a connected socket. */
-
-    msgh.msg_name = NULL;
-    msgh.msg_namelen = 0;
-
-    /* On Linux, we must transmit at least one byte of real data in
-        order to send ancillary data. We transmit an arbitrary integer
-        whose value is ignored by recvfd(). */
-
-    msgh.msg_iov = &iov;
-    msgh.msg_iovlen = 1;
-    iov.iov_base = &data;
-    iov.iov_len = sizeof(int);
-    data = 12345;
-
-    /* Set 'msghdr' fields that describe ancillary data */
-
-    msgh.msg_control = controlMsg.buf;
-    msgh.msg_controllen = sizeof(controlMsg.buf);
-
-    /* Set up ancillary data describing file descriptor to send */
-
-    cmsgp = CMSG_FIRSTHDR(&msgh);
-    cmsgp->cmsg_level = SOL_SOCKET;
-    cmsgp->cmsg_type = SCM_RIGHTS;
-    cmsgp->cmsg_len = CMSG_LEN(sizeof(int));
-    memcpy(CMSG_DATA(cmsgp), &fd, sizeof(int));
-
-    /* Send real plus ancillary data */
-
-    if (sendmsg(sockfd, &msgh, 0) == -1)
-        return -1;
-
-    return 0;
-}
-
-/* Receive a file descriptor on a connected UNIX domain socket. Returns
-    the received file descriptor on success, or -1 on error. */
-
-static int
-recvfd(int sockfd)
-{
-    int            data, fd;
-    ssize_t        nr;
-    struct iovec   iov;
-    struct msghdr  msgh;
-
-    /* Allocate a char buffer for the ancillary data. See the comments
-        in sendfd() */
-    union {
-        char   buf[CMSG_SPACE(sizeof(int))];
-        struct cmsghdr align;
-    } controlMsg;
-    struct cmsghdr *cmsgp;
-
-    /* The 'msg_name' field can be used to obtain the address of the
-        sending socket. However, we do not need this information. */
-
-    msgh.msg_name = NULL;
-    msgh.msg_namelen = 0;
-
-    /* Specify buffer for receiving real data */
-
-    msgh.msg_iov = &iov;
-    msgh.msg_iovlen = 1;
-    iov.iov_base = &data;       /* Real data is an 'int' */
-    iov.iov_len = sizeof(int);
-
-    /* Set 'msghdr' fields that describe ancillary data */
-
-    msgh.msg_control = controlMsg.buf;
-    msgh.msg_controllen = sizeof(controlMsg.buf);
-
-    /* Receive real plus ancillary data; real data is ignored */
-
-    nr = recvmsg(sockfd, &msgh, 0);
-    if (nr == -1)
-        return -1;
-
-    cmsgp = CMSG_FIRSTHDR(&msgh);
-
-    /* Check the validity of the 'cmsghdr' */
-
-    if (cmsgp == NULL
-        || cmsgp->cmsg_len != CMSG_LEN(sizeof(int))
-        || cmsgp->cmsg_level != SOL_SOCKET
-        || cmsgp->cmsg_type != SCM_RIGHTS)
-    {
-        errno = EINVAL;
-        return -1;
-    }
-
-    /* Return the received file descriptor to our caller */
-
-    memcpy(&fd, CMSG_DATA(cmsgp), sizeof(int));
-    return fd;
-}
-
-static void
-sigchldHandler(int sig)
-{
-    char msg[] = "\tS: target has terminated; bye\n";
-
-    write(STDOUT_FILENO, msg, sizeof(msg) - 1);
-    _exit(EXIT_SUCCESS);
-}
 
 static int
 seccomp(unsigned int operation, unsigned int flags, void *args)
@@ -223,17 +93,6 @@ installNotifyFilter(void)
     return notifyFd;
 }
 
-/* Close a pair of sockets created by socketpair() */
-
-static void
-closeSocketPair(int sockPair[2])
-{
-    if (close(sockPair[0]) == -1)
-        err(EXIT_FAILURE, "closeSocketPair-close-0");
-    if (close(sockPair[1]) == -1)
-        err(EXIT_FAILURE, "closeSocketPair-close-1");
-}
-
 /* Implementation of the target process; create a child process that:
 
     (1) installs a seccomp filter with the
@@ -267,18 +126,7 @@ targetProcess(void *argv[])
 
     pthread_mutex_unlock(&mutex_notifyfd);
 
-
-    /* Pass the notification file descriptor to the tracing process over
-        a UNIX domain socket */
-
-    /*
-    if (sendfd(sockPair[0], notifyFd) == -1)
-        err(EXIT_FAILURE, "sendfd");
-    */
-
-    //printf("ap = %s\n", *arg);
     /* Perform a mkdir() call for each of the command-line arguments */
-
     for (char **ap = arg; *ap != NULL; ap++) {
         printf("\nT: about to mkdir(\"%s\")\n", *ap);
 
@@ -460,12 +308,6 @@ handleNotifications(int notifyFd)
         printf("\tS: got notification (ID %#llx) for PID %d\n",
                 req->id, req->pid);
 
-        /* The only system call that can generate a notification event
-            is mkdir(2). Nevertheless, we check that the notified system
-            call is indeed mkdir() as kind of future-proofing of this
-            code in case the seccomp filter is later modified to
-            generate notifications for other system calls. */
-
         if (req->data.nr == SYS_getpid) {
             resp->val = 1234;
             resp->id = req->id;
@@ -606,14 +448,12 @@ handleNotifications(int notifyFd)
     (2) handles notifications that arrive on that file descriptor. */
 
 static void
-supervisor(int sockPair[2])
+supervisor()
 {   
     pthread_mutex_lock(&mutex_notifyfd);
     if (notifyFd == -1)
         err(EXIT_FAILURE, "recvfd");
     pthread_mutex_unlock(&mutex_notifyfd);
-
-    closeSocketPair(sockPair);  /* We no longer need the socket pair */
 
     handleNotifications(notifyFd);
 }
@@ -636,10 +476,6 @@ main(int argc, char *argv[])
         supervisor process. */
 
     pthread_mutex_init(&mutex_notifyfd, NULL);
-    /*
-    if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockPair) == -1)
-        err(EXIT_FAILURE, "socketpair");
-    */
     /* Create a child process--the "target"--that installs seccomp
         filtering. The target process writes the seccomp notification
         file descriptor onto 'sockPair[0]' and then calls mkdir(2) for
@@ -647,15 +483,6 @@ main(int argc, char *argv[])
     pthread_mutex_lock(&mutex_notifyfd);
 
     pthread_create(&tid, NULL, (void *) targetProcess, &argv[optind]);
-
-    /* Catch SIGCHLD when the target terminates, so that the
-        supervisor can also terminate. */
-
-    sa.sa_handler = sigchldHandler;
-    sa.sa_flags = 0;
-    sigemptyset(&sa.sa_mask);
-    if (sigaction(SIGCHLD, &sa, NULL) == -1)
-        err(EXIT_FAILURE, "sigaction");
 
     supervisor(sockPair);
 

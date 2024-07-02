@@ -464,6 +464,7 @@ handleNotifications(int notifyFd)
             resp->val = 1234;
             resp->id = req->id;
             resp->flags = 0;
+            resp->error = 0;
             printf("\tS: success! spoofed return of getpid() = %lld\n",
                 resp->val);
             printf("\tS: sending response "

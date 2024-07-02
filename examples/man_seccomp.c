@@ -25,7 +25,9 @@
 
 #define ARRAY_SIZE(arr)  (sizeof(arr) / sizeof((arr)[0]))
 
-int               sockPair[2];
+int                 sockPair[2];
+int                 notifyFd;
+pthread_mutex_t     mutex_notifyfd;
 
 /* Send the file descriptor 'fd' over the connected UNIX domain socket
     'sockfd'. Returns 0 on success, or -1 on error. */
@@ -190,7 +192,6 @@ seccomp(unsigned int operation, unsigned int flags, void *args)
 static int
 installNotifyFilter(void)
 {
-    int notifyFd;
 
     struct sock_filter filter[] = {
         X86_64_CHECK_ARCH_AND_LOAD_SYSCALL_NR,
@@ -264,11 +265,16 @@ targetProcess(void *argv[])
 
     notifyFd = installNotifyFilter();
 
+    pthread_mutex_unlock(&mutex_notifyfd);
+
+
     /* Pass the notification file descriptor to the tracing process over
         a UNIX domain socket */
 
+    /*
     if (sendfd(sockPair[0], notifyFd) == -1)
         err(EXIT_FAILURE, "sendfd");
+    */
 
     //printf("ap = %s\n", *arg);
     /* Perform a mkdir() call for each of the command-line arguments */
@@ -601,13 +607,11 @@ handleNotifications(int notifyFd)
 
 static void
 supervisor(int sockPair[2])
-{
-    int notifyFd;
-
-    notifyFd = recvfd(sockPair[1]);
-
+{   
+    pthread_mutex_lock(&mutex_notifyfd);
     if (notifyFd == -1)
         err(EXIT_FAILURE, "recvfd");
+    pthread_mutex_unlock(&mutex_notifyfd);
 
     closeSocketPair(sockPair);  /* We no longer need the socket pair */
 
@@ -631,13 +635,16 @@ main(int argc, char *argv[])
         notification file descriptor from the target process to the
         supervisor process. */
 
+    pthread_mutex_init(&mutex_notifyfd, NULL);
+    /*
     if (socketpair(AF_UNIX, SOCK_STREAM, 0, sockPair) == -1)
         err(EXIT_FAILURE, "socketpair");
-
+    */
     /* Create a child process--the "target"--that installs seccomp
         filtering. The target process writes the seccomp notification
         file descriptor onto 'sockPair[0]' and then calls mkdir(2) for
         each directory in the command-line arguments. */
+    pthread_mutex_lock(&mutex_notifyfd);
 
     pthread_create(&tid, NULL, (void *) targetProcess, &argv[optind]);
 
@@ -652,5 +659,7 @@ main(int argc, char *argv[])
 
     supervisor(sockPair);
 
-    exit(EXIT_SUCCESS);
+    printf("Shouldn't reach here\n");
+    pthread_mutex_destroy(&mutex_notifyfd);
+    exit(EXIT_FAILURE);
 }

@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <pthread.h>
 #include "libwrapperexample.h"
+#include <jni.h>
 
 
 #define ARRAY_SIZE(arr)  (sizeof(arr) / sizeof((arr)[0]))
@@ -106,23 +107,64 @@ installNotifyFilter(void)
     The function return value in the parent is the PID of the child
     process; the child does not return from this function. */
 
+void
+callJavaProgram(int argc, char **argv)
+{
+    JavaVMInitArgs  vm_args;
+    JavaVM          *jvm;
+    JNIEnv          *env;
+    JavaVMOption    *options = malloc(4 * sizeof(JavaVMOption));
+
+    options[0].optionString = "-Xint";
+    options[1].optionString = "-XX:+UseSerialGC";
+    options[2].optionString = "-XX:+ReduceSignalUsage";
+    options[3].optionString = "-XX:+DisableAttachMechanism";
+    vm_args.nOptions = 4;
+    vm_args.options = options;
+    vm_args.version = JNI_VERSION_21;
+    vm_args.ignoreUnrecognized = JNI_FALSE;
+
+    jint rc = JNI_CreateJavaVM(&jvm, (void**)&env, &vm_args);
+    if (rc != JNI_OK)
+        err(EXIT_FAILURE, "JNI_CreateJavaVM %d", rc);
+    free(options);
+
+    jclass cls = (*env)->FindClass(env, "md6reflection");
+    if (cls == NULL)
+        err(EXIT_FAILURE, "FindClass");
+
+    jmethodID mid = (*env)->GetStaticMethodID(env, cls, "main", "([Ljava/lang/String;)V");
+    if (mid == NULL)
+        err(EXIT_FAILURE, "main(String[]) not found");
+
+    jobjectArray arr = (*env)->NewObjectArray(env, argc, (*env)->FindClass(env, "java/lang/String"), NULL);
+    for (int i = 0; i < argc; i++) {
+        printf("JVM argv[%d]: %s", i, argv[i]);
+        (*env)->SetObjectArrayElement(env, arr, i, (*env)->NewStringUTF(env, argv[i]));
+    }
+    
+    (*env)->CallStaticVoidMethod(env, cls, mid, arr);
+    (*jvm)->DestroyJavaVM(jvm);
+}
+
 static int
 callEntryPoint(char **argv)
 {
-    graal_isolate_t *isolate = NULL;
-    graal_isolatethread_t *thread = NULL;
+    int                     result;
+    graal_isolate_t         *isolate;
+    graal_isolatethread_t   *thread;
 
     if (graal_create_isolate(NULL, &isolate, &thread) != 0)
         err(EXIT_FAILURE, "graal_create_isolate");
 
-    int result = run_c(thread, argv[0]);
+    result = run_c(thread, argv[0]);
     printf("T: native image returned %d\n", result);
     graal_tear_down_isolate(thread);
     return result;
  }
 
 void *
-targetProcess(void *argv[])
+targetProcess(void *argv[])     // TODO: change to argc+argv struct
 {
     int    notifyFd, s;
     pid_t  targetPid;
@@ -143,9 +185,11 @@ targetProcess(void *argv[])
 
     pthread_mutex_unlock(&mutex_notifyfd);
 
-    callEntryPoint(arg);
+    //callEntryPoint(arg);
+    callJavaProgram(1, arg);    // TODO: change to argc+argv struct
 
     /* Perform a mkdir() call for each of the command-line arguments */
+    /*
     for (char **ap = arg; *ap != NULL; ap++) {
         printf("\nT: about to mkdir(\"%s\")\n", *ap);
 
@@ -164,7 +208,7 @@ targetProcess(void *argv[])
     int numRead = read(STDIN_FILENO, buf, 9);
     buf[numRead] = '\0';
     printf("T: read \"%s\"", buf);
-
+    */
     printf("\nT: terminating\n");
     exit(EXIT_SUCCESS);
 }

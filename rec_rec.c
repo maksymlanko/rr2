@@ -28,8 +28,7 @@
 
 #define ARRAY_SIZE(arr)  (sizeof(arr) / sizeof((arr)[0]))
 
-int                 notifyFd;
-pthread_mutex_t     mutex_notifyfd;
+int                 notifyFd = -1;
 
 static int
 seccomp(unsigned int operation, unsigned int flags, void *args)
@@ -68,16 +67,7 @@ installNotifyFilter(void)
 
     struct sock_filter filter[] = {
         X86_64_CHECK_ARCH_AND_LOAD_SYSCALL_NR,
-
-        /* mkdir() triggers notification to user-space supervisor */
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_read, 2, 0),
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_getpid, 1, 0),
-        BPF_JUMP(BPF_JMP | BPF_JEQ | BPF_K, SYS_mkdir, 0, 1),
         BPF_STMT(BPF_RET + BPF_K, SECCOMP_RET_USER_NOTIF),
-
-        /* Every other system call is allowed */
-
-        BPF_STMT(BPF_RET | BPF_K, SECCOMP_RET_ALLOW),
     };
 
     struct sock_fprog prog = {
@@ -166,7 +156,7 @@ callEntryPoint(char **argv)
 void *
 targetProcess(void *argv[])     // TODO: change to argc+argv struct
 {
-    int    notifyFd, s;
+    int    s;
     pid_t  targetPid;
     char   **arg;
 
@@ -181,15 +171,13 @@ targetProcess(void *argv[])     // TODO: change to argc+argv struct
     if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0))
         err(EXIT_FAILURE, "prctl");
 
-    notifyFd = installNotifyFilter();
-
-    pthread_mutex_unlock(&mutex_notifyfd);
+    installNotifyFilter();
 
     //callEntryPoint(arg);
-    callJavaProgram(1, arg);    // TODO: change to argc+argv struct
+    //callJavaProgram(1, arg);    // TODO: change to argc+argv struct
 
     /* Perform a mkdir() call for each of the command-line arguments */
-    /*
+    
     for (char **ap = arg; *ap != NULL; ap++) {
         printf("\nT: about to mkdir(\"%s\")\n", *ap);
 
@@ -208,7 +196,7 @@ targetProcess(void *argv[])     // TODO: change to argc+argv struct
     int numRead = read(STDIN_FILENO, buf, 9);
     buf[numRead] = '\0';
     printf("T: read \"%s\"", buf);
-    */
+    
     printf("\nT: terminating\n");
     exit(EXIT_SUCCESS);
 }
@@ -368,9 +356,29 @@ handleNotifications(int notifyFd)
                 continue;
             err(EXIT_FAILURE, "\tS: ioctl-SECCOMP_IOCTL_NOTIF_RECV");
         }
+        //fprintf(stderr, "syscall(%d) {%d, %d, %d, %d, %d, %d} = ", syscall, regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
 
-        printf("\tS: got notification (ID %#llx) for PID %d\n",
-                req->id, req->pid);
+        //fprintf("\tS: got notification (ID %#llx) for PID %d\n",
+        //        req->id, req->pid);
+
+        resp->id = req->id;
+        resp->error = 0;
+        resp->val = 0;
+        resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
+
+        //printf("\tS: sending response "
+        //    "(flags = %#x; val = %lld; error = %d)\n",
+        //    resp->flags, resp->val, resp->error);
+
+        if (ioctl(notifyFd, SECCOMP_IOCTL_NOTIF_SEND, resp) == -1) {
+            if (errno == ENOENT)
+                printf("\tS: response failed with ENOENT; "
+                        "perhaps target process's syscall was "
+                        "interrupted by a signal?\n");
+            else
+                perror("ioctl-SECCOMP_IOCTL_NOTIF_SEND");
+        }
+        continue;
 
         if (req->data.nr == SYS_getpid) {
             resp->val = 1234;
@@ -521,10 +529,9 @@ handleNotifications(int notifyFd)
 static void
 supervisor()
 {   
-    pthread_mutex_lock(&mutex_notifyfd);
-    if (notifyFd == -1)
-        err(EXIT_FAILURE, "recvfd");
-    pthread_mutex_unlock(&mutex_notifyfd);
+    while (notifyFd == -1)
+        usleep(100);
+        //err(EXIT_FAILURE, "recvfd");
 
     handleNotifications(notifyFd);
 }
@@ -546,18 +553,15 @@ main(int argc, char *argv[])
         notification file descriptor from the target process to the
         supervisor process. */
 
-    pthread_mutex_init(&mutex_notifyfd, NULL);
     /* Create a child process--the "target"--that installs seccomp
         filtering. The target process writes the seccomp notification
         file descriptor onto 'sockPair[0]' and then calls mkdir(2) for
         each directory in the command-line arguments. */
-    pthread_mutex_lock(&mutex_notifyfd);
 
     pthread_create(&tid, NULL, (void *) targetProcess, &argv[optind]);
 
     supervisor();
 
     printf("Shouldn't reach here\n");
-    pthread_mutex_destroy(&mutex_notifyfd);
     exit(EXIT_FAILURE);
 }

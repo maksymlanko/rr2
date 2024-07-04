@@ -338,11 +338,13 @@ handleNotifications(int notifyFd)
 {
     bool                        pathOK;
     char                        path[PATH_MAX];
+    char                        buf[1024] = {0};
     struct seccomp_notif        *req;
     struct seccomp_notif_resp   *resp;
     struct seccomp_notif_sizes  sizes;
 
     allocSeccompNotifBuffers(&req, &resp, &sizes);
+    int fileFd = open("new_file.txt", O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 
     /* Loop handling notifications */
 
@@ -356,10 +358,9 @@ handleNotifications(int notifyFd)
                 continue;
             err(EXIT_FAILURE, "\tS: ioctl-SECCOMP_IOCTL_NOTIF_RECV");
         }
-        //fprintf(stderr, "syscall(%d) {%d, %d, %d, %d, %d, %d} = ", syscall, regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
-
-        //fprintf("\tS: got notification (ID %#llx) for PID %d\n",
-        //        req->id, req->pid);
+        
+        sprintf(buf, "\tS: got notification (ID %#llx) for PID %d\n", req->id, req->pid);
+        write(fileFd, buf, strlen(buf));
 
         resp->id = req->id;
         resp->error = 0;
@@ -530,7 +531,7 @@ static void
 supervisor()
 {   
     while (notifyFd == -1)
-        usleep(100);
+        sched_yield();
         //err(EXIT_FAILURE, "recvfd");
 
     handleNotifications(notifyFd);

@@ -28,7 +28,14 @@
 
 #define ARRAY_SIZE(arr)  (sizeof(arr) / sizeof((arr)[0]))
 
-int                 notifyFd = -1;
+enum phase {
+    IGNORE,
+    RECORD,
+    RECOVER
+};
+
+int                 notifyFd;
+enum phase          phase; 
 
 static int
 seccomp(unsigned int operation, unsigned int flags, void *args)
@@ -147,7 +154,9 @@ callEntryPoint(char **argv)
     if (graal_create_isolate(NULL, &isolate, &thread) != 0)
         err(EXIT_FAILURE, "graal_create_isolate");
 
+    phase = RECORD;
     result = run_c(thread, argv[0]);
+    phase = IGNORE;
     printf("T: native image returned %d\n", result);
     graal_tear_down_isolate(thread);
     return result;
@@ -173,11 +182,11 @@ targetProcess(void *argv[])     // TODO: change to argc+argv struct
 
     installNotifyFilter();
 
-    //callEntryPoint(arg);
+    callEntryPoint(arg);
     //callJavaProgram(1, arg);    // TODO: change to argc+argv struct
 
     /* Perform a mkdir() call for each of the command-line arguments */
-    
+    /*
     for (char **ap = arg; *ap != NULL; ap++) {
         printf("\nT: about to mkdir(\"%s\")\n", *ap);
 
@@ -198,6 +207,7 @@ targetProcess(void *argv[])     // TODO: change to argc+argv struct
     printf("T: read \"%s\"", buf);
     
     printf("\nT: terminating\n");
+    */
     exit(EXIT_SUCCESS);
 }
 
@@ -344,7 +354,7 @@ handleNotifications(int notifyFd)
     struct seccomp_notif_sizes  sizes;
 
     allocSeccompNotifBuffers(&req, &resp, &sizes);
-    int fileFd = open("new_file.txt", O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
+    int logFd = open("execution.log", O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH); // TODO: also log targetProcess prints?
 
     /* Loop handling notifications */
 
@@ -358,18 +368,48 @@ handleNotifications(int notifyFd)
                 continue;
             err(EXIT_FAILURE, "\tS: ioctl-SECCOMP_IOCTL_NOTIF_RECV");
         }
+        if (phase == IGNORE){
+            resp->id = req->id;
+            resp->error = 0;
+            resp->val = 0;
+            resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
+
+            if (ioctl(notifyFd, SECCOMP_IOCTL_NOTIF_SEND, resp) == -1) {
+                if (errno == ENOENT)
+                    printf("\tS: response failed with ENOENT; "
+                            "perhaps target process's syscall was "
+                            "interrupted by a signal?\n");
+                else
+                    perror("ioctl-SECCOMP_IOCTL_NOTIF_SEND");
+            }
+            continue;
+
+        }
         
         sprintf(buf, "\tS: got notification (ID %#llx) for PID %d\n", req->id, req->pid);
-        write(fileFd, buf, strlen(buf));
+        //write(logFd, buf, strlen(buf));
+        //write(1, buf, strlen(buf));
 
         resp->id = req->id;
         resp->error = 0;
         resp->val = 0;
         resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
 
-        //printf("\tS: sending response "
-        //    "(flags = %#x; val = %lld; error = %d)\n",
-        //    resp->flags, resp->val, resp->error);
+        sprintf(buf, "\tS: sending response "
+            "(flags = %#x; val = %lld; error = %d)\n",
+            resp->flags, resp->val, resp->error);
+        //write(logFd, buf, strlen(buf));
+        //write(1, buf, strlen(buf));
+
+        //sprintf(buf, "\tS: SYSCALL %u, Arg1: %p, Arg2: %zu, Arg3: %llu\n", // lol forget this, need individual because of numArgs and types
+        //    (unsigned int) req->data.args[0], (intptr_t) req->data.args[1], req->data.args[2], req->data.args[3]);
+        sprintf(buf, "Syscall %u\n",
+            (unsigned int) req->data.nr);
+        write(logFd, buf, strlen(buf));
+        write(1, buf, strlen(buf));
+        
+        //printf("\tS: SYS_read Arg0: %u, Arg1: %p, Arg2: %zu, Arg3: %llu\n",
+        //    (unsigned int) req->data.args[0], (intptr_t) req->data.args[1], req->data.args[2], req->data.args[3]);
 
         if (ioctl(notifyFd, SECCOMP_IOCTL_NOTIF_SEND, resp) == -1) {
             if (errno == ENOENT)
@@ -544,6 +584,8 @@ main(int argc, char *argv[])
     pthread_t         tid;
 
     setbuf(stdout, NULL);
+    notifyFd = -1;
+    phase = IGNORE;
 
     if (argc < 2) {
         fprintf(stderr, "At least one pathname argument is required\n");

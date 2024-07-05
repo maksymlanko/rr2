@@ -47,11 +47,11 @@ public class WrapperExample {
         } catch (RuntimeException e) {
             // Check if the cause is NoSuchMethodException
             if (e.getCause() instanceof NoSuchMethodException) {
-                System.out.println("NoSuchMethodException caught in wrapper: " + e.getCause().getMessage());
+                //System.out.println("NoSuchMethodException caught in wrapper: " + e.getCause().getMessage());
             } else {
-                System.out.println("Other exception caught in wrapper: " + e.getMessage());
+                //System.out.println("Other exception caught in wrapper: " + e.getMessage());
             }
-            e.printStackTrace();
+            //e.printStackTrace();
             return -1;
         }
     }

@@ -28,14 +28,14 @@
 
 #define ARRAY_SIZE(arr)  (sizeof(arr) / sizeof((arr)[0]))
 
-enum phase {
+enum executionPhase {
     IGNORE,
     RECORD,
     RECOVER
 };
 
 int                 notifyFd;
-enum phase          phase; 
+enum executionPhase          phase; 
 
 static int
 seccomp(unsigned int operation, unsigned int flags, void *args)
@@ -340,6 +340,23 @@ allocSeccompNotifBuffers(struct seccomp_notif **req,
 
 }
 
+void 
+sendNotifResponse(struct seccomp_notif_resp *resp){
+    if (ioctl(notifyFd, SECCOMP_IOCTL_NOTIF_SEND, resp) == -1) {
+        if (errno == ENOENT)
+            printf("\tS: response failed with ENOENT; "
+                    "perhaps target process's syscall was "
+                    "interrupted by a signal?\n");
+        else
+            perror("ioctl-SECCOMP_IOCTL_NOTIF_SEND");
+    }
+}
+
+void 
+serializeStat(struct stat some_stat, int fd){
+
+}
+
 /* Handle notifications that arrive via the SECCOMP_RET_USER_NOTIF file
     descriptor, 'notifyFd'. */
 
@@ -374,17 +391,99 @@ handleNotifications(int notifyFd)
             resp->val = 0;
             resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
 
-            if (ioctl(notifyFd, SECCOMP_IOCTL_NOTIF_SEND, resp) == -1) {
-                if (errno == ENOENT)
-                    printf("\tS: response failed with ENOENT; "
-                            "perhaps target process's syscall was "
-                            "interrupted by a signal?\n");
-                else
-                    perror("ioctl-SECCOMP_IOCTL_NOTIF_SEND");
-            }
+            sendNotifResponse(resp);
             continue;
 
+        } else if (phase == RECORD) {
+            resp->id = req->id;
+            resp-> flags = 0;
+            switch(req->data.nr) {
+                case SYS_read:
+                    break;
+
+                case SYS_write:
+                    int fd = req->data.args[0];
+                    const char *sys_buf = (const char *) req->data.args[1];
+                    size_t count = req->data.args[2];
+
+                    ssize_t bytesWritten = write(fd, sys_buf, count);
+                    if (bytesWritten == -1) 
+                        err(EXIT_FAILURE, "Failed to emulate write");
+
+                    resp->error = (bytesWritten == -1) ? -errno : 0;
+                    resp->val = bytesWritten;
+
+                    sendNotifResponse(resp);
+                    sprintf(buf, "%0*X%0*zX\n", sizeof(short) * 2, req->data.nr, sizeof(ssize_t) * 2, bytesWritten);
+                    write(logFd, buf, strlen(buf));
+                    break;
+
+                case SYS_fstat:
+                    /*
+                    int fd2 = req->data.args[0];
+                    struct stat *sys_buf2 = (struct stat *) req->data.args[1];
+
+                    int result = fstat(fd2, sys_buf2);
+                    if (result == -1)
+                        err(EXIT_FAILURE, "Failed to emulate fstat");
+
+                    resp->error = (result == -1) ? -errno : 0;
+                    resp->val = result;
+
+                    sendNotifResponse(resp);
+                    // TODO
+                    sprintf()
+                    write()
+                    */
+                    resp->id = req->id;
+                    resp->error = 0;
+                    resp->val = 0;
+                    resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
+
+                    sendNotifResponse(resp);
+                    sprintf(buf, "Skipped fstat!!\n");
+                    write(logFd, buf, strlen(buf));
+
+                    break;
+
+                case SYS_lseek:
+                    int fd3 = req->data.args[0];
+                    off_t offset = (off_t) req->data.args[1];
+                    int whence = req->data.args[2];
+                    
+                    off_t resultOffset = lseek(fd3, offset, whence);
+                    if (resultOffset == -1)
+                        err(EXIT_FAILURE, "Failed to emulate lseek");
+
+                    resp->error = (resultOffset == -1) ? -errno : 0;
+                    resp->val = resultOffset;
+
+                    sendNotifResponse(resp);
+                    sprintf(buf, "%0*X%0*jd\n", sizeof(short) * 2, req->data.nr, sizeof(intmax_t) * 2, (intmax_t) resultOffset);
+                    write(logFd, buf, strlen(buf));
+                    break;
+                
+                case SYS_openat:
+                    int dirfd = req->data.args[0];
+                    const char *pathname = (const char *) req->data.args[1];
+                    int flags = req->data.args[2];
+                    mode_t mode = req->data.args[3];
+
+                    int responseFd = openat(dirfd, pathname, flags, mode);
+                    if (responseFd == -1)
+                        err(EXIT_FAILURE, "Failed to emulate openat");
+
+                    resp->error = (responseFd == -1) ? -errno : 0;
+                    resp->val = responseFd;
+
+                    sendNotifResponse(resp);
+                    sprintf(buf, "%0*X%0*zX\n", sizeof(short) * 2, req->data.nr, sizeof(long) * 2, responseFd);
+                    write(logFd, buf, strlen(buf));
+                    break;
+            }
+            continue;
         }
+        
         
         sprintf(buf, "\tS: got notification (ID %#llx) for PID %d\n", req->id, req->pid);
         //write(logFd, buf, strlen(buf));
@@ -405,7 +504,7 @@ handleNotifications(int notifyFd)
         //    (unsigned int) req->data.args[0], (intptr_t) req->data.args[1], req->data.args[2], req->data.args[3]);
         sprintf(buf, "Syscall %u\n",
             (unsigned int) req->data.nr);
-        write(logFd, buf, strlen(buf));
+        //write(logFd, buf, strlen(buf));
         write(1, buf, strlen(buf));
         
         //printf("\tS: SYS_read Arg0: %u, Arg1: %p, Arg2: %zu, Arg3: %llu\n",

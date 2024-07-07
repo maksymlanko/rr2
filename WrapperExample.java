@@ -25,13 +25,14 @@ public class WrapperExample {
 
     @CEntryPoint(name = "run_c")
     private static int testExceptions(IsolateThread thread, CCharPointer cFilter) {
-        System.out.println("Entrei");
         try {
             String arg = CTypeConversion.toJavaString(cFilter);
             String[] mainArgs = new String[]{arg}; // Example arguments to main
             // tentar signal ver se ja esta jvm inicializada
             // podes experiemtnar com syscall e procura la
-            System.out.println("Entrei nr 2");
+
+            //System.out.println("Entrei nr 2");
+
             //ReflectionExample.main(mainArgs);
             //MD5Checksum.main(mainArgs);
             //md5reflection.main(mainArgs);

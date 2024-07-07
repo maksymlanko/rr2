@@ -22,6 +22,8 @@ public class md6reflection {
             return;
         }
 
+        System.out.println("Entrei");
+
         String methodName = args[0];
 
         String filePath = "hash.txt";

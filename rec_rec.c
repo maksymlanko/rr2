@@ -366,18 +366,21 @@ handleNotifications(int notifyFd)
     bool                        pathOK;
     char                        path[PATH_MAX];
     char                        buf[1024] = {0};
+    void                        **savedPointers;
+    void                        **curPointer;
     struct seccomp_notif        *req;
     struct seccomp_notif_resp   *resp;
     struct seccomp_notif_sizes  sizes;
 
+
     allocSeccompNotifBuffers(&req, &resp, &sizes);
+    savedPointers = malloc(sizeof(void *) * 10);
+    curPointer = savedPointers;
     int logFd = open("execution.log", O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH); // TODO: also log targetProcess prints?
 
-    /* Loop handling notifications */
 
     for (;;) {
 
-        /* Wait for next notification, returning info in '*req' */
 
         memset(req, 0, sizes.seccomp_notif);
         if (ioctl(notifyFd, SECCOMP_IOCTL_NOTIF_RECV, req) == -1) {
@@ -397,8 +400,30 @@ handleNotifications(int notifyFd)
         } else if (phase == RECORD) {
             resp->id = req->id;
             resp-> flags = 0;
+
             switch(req->data.nr) {
                 case SYS_read:
+                    int fd5 = req->data.args[0];
+                    void *buf3 = (void *) req->data.args[1];
+                    size_t count2 = (size_t) req->data.args[2];
+
+                    ssize_t bytesRead = read(fd5, buf3, count2);
+                    if (bytesRead == -1)
+                        err(EXIT_FAILURE, "Failed to emulate read");
+
+                    resp->error = (bytesRead == -1) ? -errno : 0;
+                    resp->val = bytesRead;
+                    sendNotifResponse(resp);
+
+                    char *savedBuf = malloc(sizeof(char) * (bytesRead + 1));
+                    if (savedBuf == NULL)
+                        err(EXIT_FAILURE, "Failed to allocate memory to savedBuf");
+                    memcpy(savedBuf, buf3, sizeof(char) * bytesRead);
+                    savedBuf[bytesRead] = '\0';
+                    //printf("savedBuf content: %s\n", savedBuf);
+                    *(curPointer++) = savedBuf;
+                    sprintf(buf, "%0*X%0*lx%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(char *) * 2, savedBuf, sizeof(int) * 2, bytesRead);
+                    write(logFd, buf, strlen(buf));
                     break;
 
                 case SYS_write:
@@ -412,38 +437,47 @@ handleNotifications(int notifyFd)
 
                     resp->error = (bytesWritten == -1) ? -errno : 0;
                     resp->val = bytesWritten;
-
                     sendNotifResponse(resp);
+
                     sprintf(buf, "%0*X%0*zX\n", sizeof(short) * 2, req->data.nr, sizeof(ssize_t) * 2, bytesWritten);
                     write(logFd, buf, strlen(buf));
                     break;
 
-                case SYS_fstat:
-                    /*
-                    int fd2 = req->data.args[0];
-                    struct stat *sys_buf2 = (struct stat *) req->data.args[1];
-
-                    int result = fstat(fd2, sys_buf2);
+                case SYS_close:
+                    int fd4 = req->data.args[0];
+                    int result = close(fd4);
                     if (result == -1)
-                        err(EXIT_FAILURE, "Failed to emulate fstat");
+                        err(EXIT_FAILURE, "Failed to emulate close");
 
                     resp->error = (result == -1) ? -errno : 0;
                     resp->val = result;
-
                     sendNotifResponse(resp);
-                    // TODO
-                    sprintf()
-                    write()
-                    */
-                    resp->id = req->id;
-                    resp->error = 0;
-                    resp->val = 0;
-                    resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
 
-                    sendNotifResponse(resp);
-                    sprintf(buf, "Skipped fstat!!\n");
+                    sprintf(buf, "%0*X%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(int) * 2, result);
                     write(logFd, buf, strlen(buf));
+                    break;
 
+                case SYS_fstat:
+                    
+                    int fd2 = req->data.args[0];
+                    struct stat *sys_buf2 = (struct stat *) req->data.args[1];
+
+                    int resultFstat = fstat(fd2, sys_buf2);
+                    if (resultFstat == -1)
+                        err(EXIT_FAILURE, "Failed to emulate fstat");
+
+                    resp->error = (resultFstat == -1) ? -errno : 0;
+                    resp->val = resultFstat;
+                    sendNotifResponse(resp);
+
+                    struct stat *savedStat = malloc(sizeof(struct stat));
+                    if (savedStat == NULL)
+                        err(EXIT_FAILURE, "Failed to allocate memory to struct stat");
+                    memcpy(savedStat, sys_buf2, sizeof(struct stat));
+                    *(curPointer++) = savedStat;
+                    // maybe %p instead of %lx? but %lx has correct amount of 0s
+                    sprintf(buf, "%0*X%0*lx%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(struct stat *) * 2, savedStat, sizeof(int) * 2, resultFstat);
+                    write(logFd, buf, strlen(buf));                    
                     break;
 
                 case SYS_lseek:
@@ -457,8 +491,8 @@ handleNotifications(int notifyFd)
 
                     resp->error = (resultOffset == -1) ? -errno : 0;
                     resp->val = resultOffset;
-
                     sendNotifResponse(resp);
+
                     sprintf(buf, "%0*X%0*jd\n", sizeof(short) * 2, req->data.nr, sizeof(intmax_t) * 2, (intmax_t) resultOffset);
                     write(logFd, buf, strlen(buf));
                     break;
@@ -475,8 +509,8 @@ handleNotifications(int notifyFd)
 
                     resp->error = (responseFd == -1) ? -errno : 0;
                     resp->val = responseFd;
-
                     sendNotifResponse(resp);
+
                     sprintf(buf, "%0*X%0*zX\n", sizeof(short) * 2, req->data.nr, sizeof(long) * 2, responseFd);
                     write(logFd, buf, strlen(buf));
                     break;

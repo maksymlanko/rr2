@@ -31,6 +31,7 @@
 enum executionPhase {
     IGNORE,
     RECORD,
+    RESTART,
     RECOVER
 };
 
@@ -136,11 +137,12 @@ callJavaProgram(int argc, char **argv)
 
     jobjectArray arr = (*env)->NewObjectArray(env, argc, (*env)->FindClass(env, "java/lang/String"), NULL);
     for (int i = 0; i < argc; i++) {
-        printf("JVM argv[%d]: %s", i, argv[i]);
+        //printf("JVM argv[%d]: %s", i, argv[i]);
         (*env)->SetObjectArrayElement(env, arr, i, (*env)->NewStringUTF(env, argv[i]));
     }
-    
+    phase = RESTART; // reset to beginning of log file and start emulating syscalls
     (*env)->CallStaticVoidMethod(env, cls, mid, arr);
+    phase = IGNORE;
     (*jvm)->DestroyJavaVM(jvm);
 }
 
@@ -183,7 +185,7 @@ targetProcess(void *argv[])     // TODO: change to argc+argv struct
     installNotifyFilter();
 
     callEntryPoint(arg);
-    //callJavaProgram(1, arg);    // TODO: change to argc+argv struct
+    callJavaProgram(1, arg);    // TODO: change to argc+argv struct
 
     /* Perform a mkdir() call for each of the command-line arguments */
     /*
@@ -376,7 +378,9 @@ handleNotifications(int notifyFd)
     allocSeccompNotifBuffers(&req, &resp, &sizes);
     savedPointers = malloc(sizeof(void *) * 10);
     curPointer = savedPointers;
-    int logFd = open("execution.log", O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH); // TODO: also log targetProcess prints?
+    int logFd = open("execution.log", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH); // TODO: also log targetProcess prints?
+    if (logFd == -1)
+        err(EXIT_FAILURE, "Failed to open logFd");
 
 
     for (;;) {
@@ -515,6 +519,47 @@ handleNotifications(int notifyFd)
                     write(logFd, buf, strlen(buf));
                     break;
             }
+            continue;
+        } else if (phase == RESTART) {
+            phase = RECOVER;
+            off_t lseekResult = lseek(logFd, 0, SEEK_SET); // add error checking
+            curPointer = savedPointers;
+        } 
+        // separate from previous if-else block so that we can reset the file and move here
+        if (phase == RECOVER) {
+            char newBuf[200] = {0};
+            ssize_t numRead;
+
+            resp->id = req->id;
+            resp-> flags = 0;
+            resp->error = 0;
+
+            numRead = read(logFd, newBuf, sizeof(short) * 2); // read syscall nr
+            if (numRead == -1)
+                err(EXIT_FAILURE, "Read from file in recover");
+            newBuf[numRead] = '\0';
+            //printf("Read from file: %s\n", newBuf);
+            long int syscallNumber = strtol(newBuf, NULL, 16);
+            //printf("Emulating syscall nr: %d\n", syscallNumber);
+
+            switch(req->data.nr) {
+                case SYS_read:
+                    break;
+
+                case SYS_write:
+                    numRead = read(logFd, newBuf, sizeof(ssize_t) * 2);
+                    if (numRead == -1)
+                        err(EXIT_FAILURE, "Read from file in recover");
+
+                    //printf("RECOVER: read: %s\n", newBuf);
+                    long int syscallResult = strtol(newBuf, NULL, 16);
+                    
+                    //printf("RECOVER: result: %ld\n", syscallResult);
+                    resp->val = syscallResult;
+                    sendNotifResponse(resp);
+                    break;                    
+            }
+            numRead = read(logFd, newBuf, 1); // consume \n
             continue;
         }
         

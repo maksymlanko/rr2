@@ -475,6 +475,7 @@ handleNotifications(int notifyFd)
                     sendNotifResponse(resp);
 
                     struct stat *savedStat = malloc(sizeof(struct stat));
+                    printf("savedStat saved at: %p\n", savedStat);
                     if (savedStat == NULL)
                         err(EXIT_FAILURE, "Failed to allocate memory to struct stat");
                     memcpy(savedStat, sys_buf2, sizeof(struct stat));
@@ -542,23 +543,79 @@ handleNotifications(int notifyFd)
             long int syscallNumber = strtol(newBuf, NULL, 16);
             //printf("Emulating syscall nr: %d\n", syscallNumber);
 
+            long int        syscallResult;
+            /*
+            numRead = read(logFd, newBuf, sizeof(ssize_t) * 2); // we cant use this because it might be different size
+            if (numRead == -1)
+                err(EXIT_FAILURE, "Read from file in recover");
+            */
+
             switch(req->data.nr) {
                 case SYS_read:
                     break;
 
                 case SYS_write:
+
                     numRead = read(logFd, newBuf, sizeof(ssize_t) * 2);
                     if (numRead == -1)
                         err(EXIT_FAILURE, "Read from file in recover");
 
-                    //printf("RECOVER: read: %s\n", newBuf);
-                    long int syscallResult = strtol(newBuf, NULL, 16);
+                    newBuf[numRead] = '\0';
+                    printf("RECOVER read: %s\n", newBuf);
+                    syscallResult = strtol(newBuf, NULL, 16);
                     
-                    //printf("RECOVER: result: %ld\n", syscallResult);
+                    printf("RECOVER result: %ld\n", syscallResult);
                     resp->val = syscallResult;
-                    sendNotifResponse(resp);
-                    break;                    
+                    break;       
+
+                case SYS_close:
+                    break;
+
+                case SYS_fstat:
+                    numRead = read(logFd, newBuf, sizeof(struct stat *) * 2); // has struct stat *
+                    if (numRead == -1)
+                        err(EXIT_FAILURE, "Read from file in recover");
+
+                    newBuf[numRead] = '\0';
+                    printf("RECOVER fstat has read1: %s\n", newBuf);
+                    // ver como converter para pointer
+                    long int recoverStat = strtol(newBuf, NULL, 16);
+                    printf("RECOVER fstat pointer: %p\n", recoverStat);
+                    memcpy((void *) recoverStat, *(curPointer++), sizeof(struct stat)); // confirmar se faz alguma coisa !
+
+                    numRead = read(logFd, newBuf, sizeof(int) * 2);
+                    newBuf[numRead] = '\0';
+                    printf("RECOVER fstat has read2: %s\n", newBuf);
+
+                    if (numRead == -1)
+                        err(EXIT_FAILURE, "Read from file in recover");
+                    syscallResult = strtol(newBuf, NULL, 16);
+                    printf("RECOVER result: %d\n", syscallResult);
+
+                    resp->val = syscallResult;
+
+
+                    break;
+
+                case SYS_lseek:
+                    break;
+
+                case SYS_openat:
+
+                    numRead = read(logFd, newBuf, sizeof(ssize_t) * 2);
+                    if (numRead == -1)
+                        err(EXIT_FAILURE, "Read from file in recover");
+                    newBuf[numRead] = '\0';
+
+                    printf("RECOVER openat: %s\n", newBuf);
+                    syscallResult = strtol(newBuf, NULL, 16);
+                    
+                    printf("RECOVER result: %ld\n", syscallResult);
+                    resp->val = syscallResult;
+                    break;       
+
             }
+            sendNotifResponse(resp);
             numRead = read(logFd, newBuf, 1); // consume \n
             continue;
         }

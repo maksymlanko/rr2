@@ -359,6 +359,43 @@ serializeStat(struct stat some_stat, int fd){
 
 }
 
+void
+debug_fd(int fd, pid_t pid) {
+    char        fd_path[256];
+    char        target_path[PATH_MAX];
+    ssize_t     len;
+
+    snprintf(fd_path, sizeof(fd_path), "/proc/%d/fd/%d", pid, fd);
+    
+    len = readlink(fd_path, target_path, sizeof(target_path) - 1);
+    if (len != -1) {
+        target_path[len] = '\0';
+        printf("FD %d (in pid %d) points to: %s\n", fd, pid, target_path);
+    } else {
+        err(EXIT_FAILURE, "readlink");
+    }
+}
+
+bool
+is_fd_valid(int fd) {
+    return fcntl(fd, F_GETFD) != -1 || errno != EBADF;
+}
+
+void
+printPath(int fd){
+    char    fd_path[PATH_MAX];
+    char    real_path[PATH_MAX];
+
+    snprintf(fd_path, sizeof(fd_path), "/proc/self/fd/%d", fd);
+    ssize_t len = readlink(fd_path, real_path, sizeof(real_path)-1);
+    if (len != -1) {
+        real_path[len] = '\0';
+        printf("fstat called on fd %d, which points to: %s\n", fd, real_path);
+    } else {
+        printf("fstat called on fd %d, but couldn't resolve path\n", fd);
+    }
+}
+
 /* Handle notifications that arrive via the SECCOMP_RET_USER_NOTIF file
     descriptor, 'notifyFd'. */
 
@@ -366,6 +403,7 @@ static void
 handleNotifications(int notifyFd)
 {
     bool                        pathOK;
+    int                         writeCounter = 0; // TEMPORARY !!!
     char                        path[PATH_MAX];
     char                        buf[1024] = {0};
     void                        **savedPointers;
@@ -373,7 +411,6 @@ handleNotifications(int notifyFd)
     struct seccomp_notif        *req;
     struct seccomp_notif_resp   *resp;
     struct seccomp_notif_sizes  sizes;
-
 
     allocSeccompNotifBuffers(&req, &resp, &sizes);
     savedPointers = malloc(sizeof(void *) * 10);
@@ -423,7 +460,7 @@ handleNotifications(int notifyFd)
                     if (savedBuf == NULL)
                         err(EXIT_FAILURE, "Failed to allocate memory to savedBuf");
                     memcpy(savedBuf, buf3, sizeof(char) * bytesRead);
-                    savedBuf[bytesRead] = '\0';
+                    savedBuf[bytesRead] = '\0'; // TODO: pode nao ser preciso isto // pode dar erro
                     //printf("savedBuf content: %s\n", savedBuf);
                     *(curPointer++) = savedBuf;
                     sprintf(buf, "%0*X%0*lx%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(char *) * 2, savedBuf, sizeof(int) * 2, bytesRead);
@@ -550,71 +587,120 @@ handleNotifications(int notifyFd)
                 err(EXIT_FAILURE, "Read from file in recover");
             */
 
+            printf("req->data.nr = %d\n", req->data.nr);
             switch(req->data.nr) {
                 case SYS_read:
-                    break;
+
+                    resp->id = req->id;
+                    resp->error = 0;
+                    resp->val = 0;
+                    resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
+                    sendNotifResponse(resp);
+
+                    numRead = read(logFd, newBuf, 25); // just so we advance on file
+                    continue;
 
                 case SYS_write:
 
+                    /* temp way to change to IGNORE again after finishing RECOVER copy */
+                    writeCounter++;
+                    if (writeCounter == 2)
+                        phase = IGNORE;
+                    
                     numRead = read(logFd, newBuf, sizeof(ssize_t) * 2);
                     if (numRead == -1)
                         err(EXIT_FAILURE, "Read from file in recover");
 
                     newBuf[numRead] = '\0';
-                    printf("RECOVER read: %s\n", newBuf);
+                    //printf("RECOVER write: %s\n", newBuf);
                     syscallResult = strtol(newBuf, NULL, 16);
                     
                     printf("RECOVER result: %ld\n", syscallResult);
                     resp->val = syscallResult;
-                    break;       
-
-                case SYS_close:
                     break;
+                    
+                case SYS_close:
+
+                    resp->id = req->id;
+                    resp->error = 0;
+                    resp->val = 0;
+                    resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
+                    sendNotifResponse(resp);
+
+                    numRead = read(logFd, newBuf, 9); // just so we advance on file
+                    continue;
 
                 case SYS_fstat:
-                    numRead = read(logFd, newBuf, sizeof(struct stat *) * 2); // has struct stat *
+
+                    int fd = (int) req->data.args[0];
+                    struct stat *user_statbuf = (struct stat *) req->data.args[1];
+
+                    numRead = read(logFd, newBuf, sizeof(struct stat *) * 2); // has struct stat *, not used
                     if (numRead == -1)
                         err(EXIT_FAILURE, "Read from file in recover");
-
                     newBuf[numRead] = '\0';
-                    printf("RECOVER fstat has read1: %s\n", newBuf);
-                    // ver como converter para pointer
-                    long int recoverStat = strtol(newBuf, NULL, 16);
-                    printf("RECOVER fstat pointer: %p\n", recoverStat);
-                    memcpy((void *) recoverStat, *(curPointer++), sizeof(struct stat)); // confirmar se faz alguma coisa !
 
-                    numRead = read(logFd, newBuf, sizeof(int) * 2);
-                    newBuf[numRead] = '\0';
-                    printf("RECOVER fstat has read2: %s\n", newBuf);
-
+                    numRead = read(logFd, newBuf, sizeof(int) * 2);           // has result
                     if (numRead == -1)
                         err(EXIT_FAILURE, "Read from file in recover");
+                    newBuf[numRead] = '\0';
+
                     syscallResult = strtol(newBuf, NULL, 16);
-                    printf("RECOVER result: %d\n", syscallResult);
+                    // Copy the recorded struct stat to the user's buffer
+                    memcpy(user_statbuf, *(curPointer++), sizeof(struct stat));
 
+                    // For debugging, print some of the stat info
+                    //printf("RECOVER fstat: fd=%d, user_statbuf=%p, original_result=%d\n", 
+                    //    fd, (void*)user_statbuf, syscallResult);
+                    //printf("  st_size=%ld, st_mode=%o\n", user_statbuf->st_size, user_statbuf->st_mode);
                     resp->val = syscallResult;
-
-
                     break;
 
                 case SYS_lseek:
+                
+                    fd = req->data.args[0];
+                    off_t offset = req->data.args[1];
+                    int whence = req->data.args[2];
+
+                    ssize_t numRead = read(logFd, newBuf, sizeof(intmax_t) * 2);
+                    if (numRead == -1)
+                        err(EXIT_FAILURE, "Read from file in recover");
+                    newBuf[numRead] = '\0';
+
+                    syscallResult = strtol(newBuf, NULL, 16);
+                    //printf("RECOVER lseek: fd=%d, offset=%ld, whence=%d, result=%ld\n",
+                    //    fd, (long)offset, whence, syscallResult);
+
+                    resp->val = syscallResult;       
                     break;
 
                 case SYS_openat:
 
+                    int resultFd = openat((int) req->data.args[0], (const char *) req->data.args[1], (int) req->data.args[2], (mode_t) req->data.args[3]);
+
                     numRead = read(logFd, newBuf, sizeof(ssize_t) * 2);
                     if (numRead == -1)
                         err(EXIT_FAILURE, "Read from file in recover");
                     newBuf[numRead] = '\0';
 
-                    printf("RECOVER openat: %s\n", newBuf);
                     syscallResult = strtol(newBuf, NULL, 16);
+                    printf("RECOVER result: %ld\n", syscallResult); // in recover its 6, but in OG process it was given 7
+                    // debug_fd(resultFd, req->pid);  // Use the PID from the request
                     
-                    printf("RECOVER result: %ld\n", syscallResult);
-                    resp->val = syscallResult;
-                    break;       
+                    resp->val = resultFd; 
+                    break;
+                    
+                default:
+                    printf("Received syscall nr: %d\n", req->data.nr);
+                    resp->id = req->id;
+                    resp->error = 0;
+                    resp->val = 0;
+                    resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
+                    sendNotifResponse(resp);
 
+                    continue;                
             }
+            
             sendNotifResponse(resp);
             numRead = read(logFd, newBuf, 1); // consume \n
             continue;

@@ -159,7 +159,8 @@ callEntryPoint(char **argv)
     phase = RECORD;
     result = run_c(thread, argv[0]);
     phase = IGNORE;
-    printf("T: native image returned %d\n", result);
+    printf("\t\tnative image returned %d\n", result);
+    printf("\t\tRECOVERING...\n");
     graal_tear_down_isolate(thread);
     return result;
  }
@@ -591,21 +592,38 @@ handleNotifications(int notifyFd)
             switch(req->data.nr) {
                 case SYS_read:
 
-                    resp->id = req->id;
-                    resp->error = 0;
-                    resp->val = 0;
-                    resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
-                    sendNotifResponse(resp);
+                    char *userBuf = (char *) req->data.args[1];
 
-                    numRead = read(logFd, newBuf, 25); // just so we advance on file
-                    continue;
+                    numRead = read(logFd, newBuf, sizeof(char *) * 2); //   has struct char *
+                    if (numRead == -1)
+                        err(EXIT_FAILURE, "Read from file in recover");
+                    newBuf[numRead] = '\0';
+
+                    long int savedBuf = strtol(newBuf, NULL, 16);
+                    //printf("savedbuf: %s\n", (char *) savedBuf);
+
+                    numRead = read(logFd, newBuf, sizeof(int) * 2); //      has struct length of str
+                    if (numRead == -1)
+                        err(EXIT_FAILURE, "Read from file in recover");
+                    newBuf[numRead] = '\0';
+
+                    int bufLen = strtol(newBuf, NULL, 16);
+
+                    memcpy(userBuf, *(curPointer++), sizeof(char) * bufLen);
+
+                    //printf("userbuf: %s\n", userBuf);
+                    resp->val = bufLen;
+
+                    break;
 
                 case SYS_write:
 
                     /* temp way to change to IGNORE again after finishing RECOVER copy */
                     writeCounter++;
-                    if (writeCounter == 2)
+                    if (writeCounter == 2){
                         phase = IGNORE;
+                        printf("\t\tFINISHED RECOVERY, CONTINUING\n");
+                    }
                     
                     numRead = read(logFd, newBuf, sizeof(ssize_t) * 2);
                     if (numRead == -1)
@@ -615,20 +633,19 @@ handleNotifications(int notifyFd)
                     //printf("RECOVER write: %s\n", newBuf);
                     syscallResult = strtol(newBuf, NULL, 16);
                     
-                    printf("RECOVER result: %ld\n", syscallResult);
+                    //printf("RECOVER write: %zd\n", syscallResult);
                     resp->val = syscallResult;
                     break;
                     
                 case SYS_close:
+                    numRead = read(logFd, newBuf, sizeof(int) * 2);
+                    newBuf[numRead] = '\0';
 
-                    resp->id = req->id;
-                    resp->error = 0;
-                    resp->val = 0;
-                    resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
-                    sendNotifResponse(resp);
+                    syscallResult = strtol(newBuf, NULL, 16);
+                    //printf("RECOVER close: %d\n", syscallResult);
 
-                    numRead = read(logFd, newBuf, 9); // just so we advance on file
-                    continue;
+                    resp->val = syscallResult;
+                    break;
 
                 case SYS_fstat:
 
@@ -684,10 +701,11 @@ handleNotifications(int notifyFd)
                     newBuf[numRead] = '\0';
 
                     syscallResult = strtol(newBuf, NULL, 16);
-                    printf("RECOVER result: %ld\n", syscallResult); // in recover its 6, but in OG process it was given 7
+                    //printf("RECOVER result: %ld\n", syscallResult); // in recover its 6, but in OG process it was given 7
                     // debug_fd(resultFd, req->pid);  // Use the PID from the request
                     
-                    resp->val = resultFd; 
+                    //resp->val = resultFd; 
+                    resp->val = syscallResult; 
                     break;
                     
                 default:

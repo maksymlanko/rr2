@@ -28,6 +28,12 @@
 
 #define ARRAY_SIZE(arr)  (sizeof(arr) / sizeof((arr)[0]))
 
+#ifdef DEBUG
+#define DEBUGPRINT(...) debugPrint(__VA_ARGS__)
+#else
+#define DEBUGPRINT(...) 
+#endif
+
 enum executionPhase {
     IGNORE,
     RECORD,
@@ -35,8 +41,19 @@ enum executionPhase {
     RECOVER
 };
 
-int                 notifyFd;
-enum executionPhase          phase; 
+int                         macro_test;
+int                         notifyFd;
+enum executionPhase         phase; 
+
+void debugPrint(const char *fmt, ...) {
+    char debugBuf[1024];  // Adjust size as needed
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(debugBuf, sizeof(debugBuf), fmt, args);
+    va_end(args);
+
+    write(macro_test, debugBuf, strlen(debugBuf));
+}
 
 static int
 seccomp(unsigned int operation, unsigned int flags, void *args)
@@ -109,7 +126,7 @@ void
 callJavaProgram(int argc, char **argv)
 {
 
-    int countArgs = 0;                  // TEMPORARY WAY TO GET ARGC
+    int countArgs = 1;                  // TEMPORARY WAY TO GET ARGC
     while (argv[countArgs] != NULL) {   // TODO: GET ARGC+ARGV AS ARGUMENT FROM THREAD LATER
         countArgs++;
     }
@@ -141,7 +158,7 @@ callJavaProgram(int argc, char **argv)
     if (mid == NULL)
         err(EXIT_FAILURE, "main(String[]) not found");
 
-    jobjectArray arr = (*env)->NewObjectArray(env, argc, (*env)->FindClass(env, "java/lang/String"), NULL);
+    jobjectArray arr = (*env)->NewObjectArray(env, countArgs - 1, (*env)->FindClass(env, "java/lang/String"), NULL);
     for (int i = 1; i < countArgs; i++) {
         //printf("JVM argv[%d]: %s", i, argv[i]);
         (*env)->SetObjectArrayElement(env, arr, i-1, (*env)->NewStringUTF(env, argv[i]));
@@ -428,6 +445,8 @@ handleNotifications(int notifyFd)
     savedPointers = malloc(sizeof(void *) * 10);
     curPointer = savedPointers;
     int logFd = open("execution.log", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH); // TODO: also log targetProcess prints?
+    macro_test = open("logfile", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+
     if (logFd == -1)
         err(EXIT_FAILURE, "Failed to open logFd");
 
@@ -455,11 +474,11 @@ handleNotifications(int notifyFd)
             resp-> flags = 0;
 
             printf("RECORD syscall nr: %d\n", req->data.nr);
-            resp->val = 0;
-            resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
-            sendNotifResponse(resp);
+            //resp->val = 0;
+            //resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE; // emulate for new program, to see which syscalls are used
+            //sendNotifResponse(resp);
 
-            continue;  
+            //continue;  
 
             switch(req->data.nr) {
                 case SYS_read:
@@ -482,6 +501,7 @@ handleNotifications(int notifyFd)
                     savedBuf[bytesRead] = '\0'; // TODO: pode nao ser preciso isto // pode dar erro
                     //printf("savedBuf content: %s\n", savedBuf);
                     *(curPointer++) = savedBuf;
+                    DEBUGPRINT("%0*X%0*lx%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(char *) * 2, savedBuf, sizeof(int) * 2, bytesRead);
                     sprintf(buf, "%0*X%0*lx%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(char *) * 2, savedBuf, sizeof(int) * 2, bytesRead);
                     write(logFd, buf, strlen(buf));
                     break;
@@ -499,6 +519,7 @@ handleNotifications(int notifyFd)
                     resp->val = bytesWritten;
                     sendNotifResponse(resp);
 
+                    DEBUGPRINT("%0*X%0*zX\n", sizeof(short) * 2, req->data.nr, sizeof(ssize_t) * 2, bytesWritten);
                     sprintf(buf, "%0*X%0*zX\n", sizeof(short) * 2, req->data.nr, sizeof(ssize_t) * 2, bytesWritten);
                     write(logFd, buf, strlen(buf));
                     break;

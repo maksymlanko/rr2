@@ -108,6 +108,12 @@ installNotifyFilter(void)
 void
 callJavaProgram(int argc, char **argv)
 {
+
+    int countArgs = 0;                  // TEMPORARY WAY TO GET ARGC
+    while (argv[countArgs] != NULL) {   // TODO: GET ARGC+ARGV AS ARGUMENT FROM THREAD LATER
+        countArgs++;
+    }
+
     JavaVMInitArgs  vm_args;
     JavaVM          *jvm;
     JNIEnv          *env;
@@ -136,9 +142,9 @@ callJavaProgram(int argc, char **argv)
         err(EXIT_FAILURE, "main(String[]) not found");
 
     jobjectArray arr = (*env)->NewObjectArray(env, argc, (*env)->FindClass(env, "java/lang/String"), NULL);
-    for (int i = 0; i < argc; i++) {
+    for (int i = 1; i < countArgs; i++) {
         //printf("JVM argv[%d]: %s", i, argv[i]);
-        (*env)->SetObjectArrayElement(env, arr, i, (*env)->NewStringUTF(env, argv[i]));
+        (*env)->SetObjectArrayElement(env, arr, i-1, (*env)->NewStringUTF(env, argv[i]));
     }
     phase = RESTART; // reset to beginning of log file and start emulating syscalls
     (*env)->CallStaticVoidMethod(env, cls, mid, arr);
@@ -156,8 +162,13 @@ callEntryPoint(char **argv)
     if (graal_create_isolate(NULL, &isolate, &thread) != 0)
         err(EXIT_FAILURE, "graal_create_isolate");
 
+    int countArgs = 1;                  // TEMPORARY WAY TO GET ARGC
+    while (argv[countArgs] != NULL) {   // TODO: GET ARGC+ARGV AS ARGUMENT FROM THREAD LATER
+        countArgs++;
+    }
+
     phase = RECORD;
-    result = run_c(thread, argv[0]);
+    result = run_c(thread, countArgs, argv);
     phase = IGNORE;
     printf("\t\tnative image returned %d\n", result);
     printf("\t\tRECOVERING...\n");
@@ -443,6 +454,13 @@ handleNotifications(int notifyFd)
             resp->id = req->id;
             resp-> flags = 0;
 
+            printf("RECORD syscall nr: %d\n", req->data.nr);
+            resp->val = 0;
+            resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
+            sendNotifResponse(resp);
+
+            continue;  
+
             switch(req->data.nr) {
                 case SYS_read:
                     int fd5 = req->data.args[0];
@@ -557,6 +575,16 @@ handleNotifications(int notifyFd)
                     sprintf(buf, "%0*X%0*zX\n", sizeof(short) * 2, req->data.nr, sizeof(long) * 2, responseFd);
                     write(logFd, buf, strlen(buf));
                     break;
+
+                default:
+                    printf("RECORD syscall nr: %d\n", req->data.nr);
+                    resp->id = req->id;
+                    resp->error = 0;
+                    resp->val = 0;
+                    resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
+                    sendNotifResponse(resp);
+
+                    continue;  
             }
             continue;
         } else if (phase == RESTART) {

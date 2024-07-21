@@ -1,6 +1,7 @@
  import org.graalvm.nativeimage.IsolateThread;
  import org.graalvm.nativeimage.c.function.CEntryPoint;
  import org.graalvm.nativeimage.c.type.CCharPointer;
+ import org.graalvm.nativeimage.c.type.CCharPointerPointer;
  import org.graalvm.nativeimage.c.type.CTypeConversion;
  import java.lang.reflect.InvocationTargetException;
  import java.lang.reflect.Method;
@@ -24,36 +25,55 @@ public class WrapperExample {
     }
 
     @CEntryPoint(name = "run_c")
-    private static int testExceptions(IsolateThread thread, CCharPointer cFilter) {
+    private static int testExceptions(IsolateThread thread, int argc, CCharPointerPointer argv) {
         try {
-            String arg = CTypeConversion.toJavaString(cFilter);
-            String[] mainArgs = new String[]{arg}; // Example arguments to main
-            // tentar signal ver se ja esta jvm inicializada
-            // podes experiemtnar com syscall e procura la
-
-            //System.out.println("Entrei nr 2");
-
-            //ReflectionExample.main(mainArgs);
-            //MD5Checksum.main(mainArgs);
-            //md5reflection.main(mainArgs);
-
-            if (mainArgs[0] == null) {
-                String[] nullArr = new String[] {};
-                md6reflection.main(nullArr);
-            } else {
-                md6reflection.main(mainArgs);                
+            if (argc < 1) {
+                System.out.println("Please provide the name of the class.");
+                return 0;
             }
-            System.out.println("Sai"); // never printed because of crash
-            return 0;
+
+            String[] javaArgs = new String[argc - 1];
+
+            CCharPointer progPointer = argv.read(0);
+            String progName = CTypeConversion.toJavaString(progPointer);
+
+            for (int i = 1; i < argc; i++) {
+                CCharPointer argPointer = argv.read(i);
+                javaArgs[i - 1] = CTypeConversion.toJavaString(argPointer);
+            }
+            
+            switch (progName) {
+                case "md6reflection":
+                    md6reflection.main(javaArgs);
+                    break;
+                case "client":
+                    client.main(javaArgs);
+                    break;
+                default:
+                    System.err.println("Unknown class name: " + progName);
+                    break;
+            }
+
+            /*
+            // Dynamically call the main method of the specified class using reflection
+            Class<?> clazz = Class.forName(progName);
+            Method mainMethod = clazz.getMethod("main", String[].class);
+            if (argc == 1) {
+                String[] nullArr = new String[]{};
+                mainMethod.invoke(null, (Object) nullArr);
+            } else {
+                mainMethod.invoke(null, (Object) javaArgs);
+            }
+            */
+           
         } catch (RuntimeException e) {
             // Check if the cause is NoSuchMethodException
             if (e.getCause() instanceof NoSuchMethodException) {
                 //System.out.println("NoSuchMethodException caught in wrapper: " + e.getCause().getMessage());
-            } else {
-                //System.out.println("Other exception caught in wrapper: " + e.getMessage());
             }
             //e.printStackTrace();
             return -1;
         }
+        return 0;
     }
 }

@@ -43,7 +43,10 @@ enum executionPhase {
 
 int                         macro_test;
 int                         notifyFd;
-enum executionPhase         phase; 
+int                         logFd;
+char                        bufLog[1024] = {0};
+enum executionPhase         phase;
+void                        **curPointer;
 
 void debugPrint(const char *fmt, ...) {
     char debugBuf[1024];  // Adjust size as needed
@@ -425,6 +428,31 @@ printPath(int fd){
     }
 }
 
+void
+newfstatatRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    int             dirfd = req->data.args[0];
+    const char      *pathname = (char *) req->data.args[1];
+    struct stat64   *buf = (struct stat64 *) req->data.args[2];
+    int             flags = req->data.args[3];
+
+    int result = fstatat64(dirfd, pathname, buf, flags);
+    if (result == -1)
+        err(EXIT_FAILURE, "Failed to emulate newfstatat");
+
+    resp->error = (result == -1) ? -errno : 0;
+    resp->val = result;
+    sendNotifResponse(resp);
+
+    struct stat64 *savedStat = malloc(sizeof(struct stat));
+    if (savedStat == NULL)
+        err(EXIT_FAILURE, "Failed to allocate memory to struct stat");
+    memcpy(savedStat, buf, sizeof(struct stat64));
+    *(curPointer++) = savedStat;
+    // maybe %p instead of %lx? but %lx has correct amount of 0s
+    sprintf(bufLog, "%0*X%0*lx%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(struct stat64 *) * 2, savedStat, sizeof(int) * 2, result);
+    write(logFd, bufLog, strlen(bufLog));
+}
+
 /* Handle notifications that arrive via the SECCOMP_RET_USER_NOTIF file
     descriptor, 'notifyFd'. */
 
@@ -434,9 +462,9 @@ handleNotifications(int notifyFd)
     bool                        pathOK;
     int                         writeCounter = 0; // TEMPORARY !!!
     char                        path[PATH_MAX];
-    char                        buf[1024] = {0};
+    // char                        bufLog[1024] = {0};
     void                        **savedPointers;
-    void                        **curPointer;
+    //void                        **curPointer;
     struct seccomp_notif        *req;
     struct seccomp_notif_resp   *resp;
     struct seccomp_notif_sizes  sizes;
@@ -444,7 +472,7 @@ handleNotifications(int notifyFd)
     allocSeccompNotifBuffers(&req, &resp, &sizes);
     savedPointers = malloc(sizeof(void *) * 10);
     curPointer = savedPointers;
-    int logFd = open("execution.log", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH); // TODO: also log targetProcess prints?
+    logFd = open("execution.log", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH); // TODO: also log targetProcess prints?
     macro_test = open("logfile", O_WRONLY | O_CREAT | O_TRUNC, 0644);
 
     if (logFd == -1)
@@ -473,10 +501,10 @@ handleNotifications(int notifyFd)
             resp->id = req->id;
             resp-> flags = 0;
 
-            printf("RECORD syscall nr: %d\n", req->data.nr);
-            //resp->val = 0;
-            //resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE; // emulate for new program, to see which syscalls are used
-            //sendNotifResponse(resp);
+            // printf("RECORD syscall nr: %d\n", req->data.nr);
+            // resp->val = 0;
+            // resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE; // emulate for new program, to see which syscalls are used
+            // sendNotifResponse(resp);
 
             //continue;  
 
@@ -501,9 +529,9 @@ handleNotifications(int notifyFd)
                     savedBuf[bytesRead] = '\0'; // TODO: pode nao ser preciso isto // pode dar erro
                     //printf("savedBuf content: %s\n", savedBuf);
                     *(curPointer++) = savedBuf;
-                    DEBUGPRINT("%0*X%0*lx%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(char *) * 2, savedBuf, sizeof(int) * 2, bytesRead);
-                    sprintf(buf, "%0*X%0*lx%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(char *) * 2, savedBuf, sizeof(int) * 2, bytesRead);
-                    write(logFd, buf, strlen(buf));
+                    //DEBUGPRINT("%0*X%0*lx%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(char *) * 2, savedBuf, sizeof(int) * 2, bytesRead);
+                    sprintf(bufLog, "%0*X%0*lx%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(char *) * 2, savedBuf, sizeof(int) * 2, bytesRead);
+                    write(logFd, bufLog, strlen(bufLog));
                     break;
 
                 case SYS_write:
@@ -519,9 +547,9 @@ handleNotifications(int notifyFd)
                     resp->val = bytesWritten;
                     sendNotifResponse(resp);
 
-                    DEBUGPRINT("%0*X%0*zX\n", sizeof(short) * 2, req->data.nr, sizeof(ssize_t) * 2, bytesWritten);
-                    sprintf(buf, "%0*X%0*zX\n", sizeof(short) * 2, req->data.nr, sizeof(ssize_t) * 2, bytesWritten);
-                    write(logFd, buf, strlen(buf));
+                    //DEBUGPRINT("%0*X%0*zX\n", sizeof(short) * 2, req->data.nr, sizeof(ssize_t) * 2, bytesWritten);
+                    sprintf(bufLog, "%0*X%0*zX\n", sizeof(short) * 2, req->data.nr, sizeof(ssize_t) * 2, bytesWritten);
+                    write(logFd, bufLog, strlen(bufLog));
                     break;
 
                 case SYS_close:
@@ -534,8 +562,8 @@ handleNotifications(int notifyFd)
                     resp->val = result;
                     sendNotifResponse(resp);
 
-                    sprintf(buf, "%0*X%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(int) * 2, result);
-                    write(logFd, buf, strlen(buf));
+                    sprintf(bufLog, "%0*X%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(int) * 2, result);
+                    write(logFd, bufLog, strlen(bufLog));
                     break;
 
                 case SYS_fstat:
@@ -558,8 +586,8 @@ handleNotifications(int notifyFd)
                     memcpy(savedStat, sys_buf2, sizeof(struct stat));
                     *(curPointer++) = savedStat;
                     // maybe %p instead of %lx? but %lx has correct amount of 0s
-                    sprintf(buf, "%0*X%0*lx%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(struct stat *) * 2, savedStat, sizeof(int) * 2, resultFstat);
-                    write(logFd, buf, strlen(buf));                    
+                    sprintf(bufLog, "%0*X%0*lx%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(struct stat *) * 2, savedStat, sizeof(int) * 2, resultFstat);
+                    write(logFd, bufLog, strlen(bufLog));                    
                     break;
 
                 case SYS_lseek:
@@ -575,8 +603,8 @@ handleNotifications(int notifyFd)
                     resp->val = resultOffset;
                     sendNotifResponse(resp);
 
-                    sprintf(buf, "%0*X%0*jd\n", sizeof(short) * 2, req->data.nr, sizeof(intmax_t) * 2, (intmax_t) resultOffset);
-                    write(logFd, buf, strlen(buf));
+                    sprintf(bufLog, "%0*X%0*jd\n", sizeof(short) * 2, req->data.nr, sizeof(intmax_t) * 2, (intmax_t) resultOffset);
+                    write(logFd, bufLog, strlen(bufLog));
                     break;
                 
                 case SYS_openat:
@@ -593,12 +621,17 @@ handleNotifications(int notifyFd)
                     resp->val = responseFd;
                     sendNotifResponse(resp);
 
-                    sprintf(buf, "%0*X%0*zX\n", sizeof(short) * 2, req->data.nr, sizeof(long) * 2, responseFd);
-                    write(logFd, buf, strlen(buf));
+                    sprintf(bufLog, "%0*X%0*zX\n", sizeof(short) * 2, req->data.nr, sizeof(long) * 2, responseFd);
+                    write(logFd, bufLog, strlen(bufLog));
+                    break;
+
+                case SYS_newfstatat:
+                    newfstatatRecord(req, resp);
                     break;
 
                 default:
-                    printf("RECORD syscall nr: %d\n", req->data.nr);
+                    printf("HAVE NOT IMPLEMENTED syscall nr: %d\n", req->data.nr);
+                    exit(0);
                     resp->id = req->id;
                     resp->error = 0;
                     resp->val = 0;
@@ -774,7 +807,7 @@ handleNotifications(int notifyFd)
         }
         
         
-        sprintf(buf, "\tS: got notification (ID %#llx) for PID %d\n", req->id, req->pid);
+        sprintf(bufLog, "\tS: got notification (ID %#llx) for PID %d\n", req->id, req->pid);
         //write(logFd, buf, strlen(buf));
         //write(1, buf, strlen(buf));
 
@@ -783,7 +816,7 @@ handleNotifications(int notifyFd)
         resp->val = 0;
         resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
 
-        sprintf(buf, "\tS: sending response "
+        sprintf(bufLog, "\tS: sending response "
             "(flags = %#x; val = %lld; error = %d)\n",
             resp->flags, resp->val, resp->error);
         //write(logFd, buf, strlen(buf));
@@ -791,10 +824,10 @@ handleNotifications(int notifyFd)
 
         //sprintf(buf, "\tS: SYSCALL %u, Arg1: %p, Arg2: %zu, Arg3: %llu\n", // lol forget this, need individual because of numArgs and types
         //    (unsigned int) req->data.args[0], (intptr_t) req->data.args[1], req->data.args[2], req->data.args[3]);
-        sprintf(buf, "Syscall %u\n",
+        sprintf(bufLog, "Syscall %u\n",
             (unsigned int) req->data.nr);
         //write(logFd, buf, strlen(buf));
-        write(1, buf, strlen(buf));
+        write(1, bufLog, strlen(bufLog));
         
         //printf("\tS: SYS_read Arg0: %u, Arg1: %p, Arg2: %zu, Arg3: %llu\n",
         //    (unsigned int) req->data.args[0], (intptr_t) req->data.args[1], req->data.args[2], req->data.args[3]);

@@ -614,8 +614,8 @@ handleNotifications(int notifyFd)
                     mode_t mode = req->data.args[3];
 
                     int responseFd = openat(dirfd, pathname, flags, mode);
-                    if (responseFd == -1)
-                        err(EXIT_FAILURE, "Failed to emulate openat");
+                    //if (responseFd == -1)
+                    //    err(EXIT_FAILURE, "Failed to emulate openat");
 
                     resp->error = (responseFd == -1) ? -errno : 0;
                     resp->val = responseFd;
@@ -628,6 +628,24 @@ handleNotifications(int notifyFd)
                 case SYS_newfstatat:
                     newfstatatRecord(req, resp);
                     break;
+
+                case SYS_futex:
+                case SYS_uname:
+                case SYS_mmap:
+                case SYS_mprotect:
+                case SYS_prctl:
+                case SYS_munmap:
+                case SYS_rt_sigprocmask:
+                    printf("SKIPPED syscall nr: %d\n", req->data.nr);
+                    sprintf(bufLog, "SKIPPED syscall nr: %d\n", req->data.nr);
+                    resp->error = 0;
+                    resp->val = 0;
+                    resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE; // emulate for new program, to see which syscalls are used
+                    sendNotifResponse(resp);
+
+                    write(logFd, bufLog, strlen(bufLog));
+                    
+                    continue;
 
                 default:
                     printf("HAVE NOT IMPLEMENTED syscall nr: %d\n", req->data.nr);
@@ -778,8 +796,8 @@ handleNotifications(int notifyFd)
                     int resultFd = openat((int) req->data.args[0], (const char *) req->data.args[1], (int) req->data.args[2], (mode_t) req->data.args[3]);
 
                     numRead = read(logFd, newBuf, sizeof(ssize_t) * 2);
-                    if (numRead == -1)
-                        err(EXIT_FAILURE, "Read from file in recover");
+                    //if (numRead == -1)
+                    //    err(EXIT_FAILURE, "Read from file in recover");
                     newBuf[numRead] = '\0';
 
                     syscallResult = strtol(newBuf, NULL, 16);

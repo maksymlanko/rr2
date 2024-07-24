@@ -429,6 +429,185 @@ printPath(int fd){
 }
 
 void
+socketRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    int     domain = req->data.args[0];
+    int     type = req->data.args[1];
+    int     protocol = req->data.args[2];
+
+    int result = socket(domain, type, protocol);
+    resp->error = (result == -1) ? -errno : 0;
+    resp->val = result;
+    sendNotifResponse(resp);
+
+    sprintf(bufLog, "%0*X%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(int) * 2, result);
+    write(logFd, bufLog, strlen(bufLog));
+}
+
+void
+connectRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    int                     sockfd = req->data.args[0];
+    const struct sockaddr   *addr = (struct sockaddr *) req->data.args[1];
+    socklen_t               addrlen = (socklen_t) req->data.args[2];
+
+    int result = connect(sockfd, addr, addrlen);
+    resp->error = (result == -1) ? -errno : 0;
+    resp->val = result;
+    sendNotifResponse(resp);
+
+    sprintf(bufLog, "%0*X%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(int) * 2, result);
+    write(logFd, bufLog, strlen(bufLog));
+}
+
+void
+sendtoRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    int                     sockfd = req->data.args[0];
+    const void              *buf = (const void *) req->data.args[1];
+    size_t                  len = (socklen_t) req->data.args[2];
+    int                     flags = req->data.args[3];
+    const struct sockaddr   *dest_addr = (const struct sockaddr *) req->data.args[4];
+    socklen_t               addrlen = (socklen_t) req->data.args[5];
+
+    int result = sendto(sockfd, buf, len, flags, dest_addr, addrlen);
+    resp->error = (result == -1) ? -errno : 0;
+    resp->val = result;
+    sendNotifResponse(resp);
+
+    sprintf(bufLog, "%0*X%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(int) * 2, result);
+    write(logFd, bufLog, strlen(bufLog));
+}
+
+void
+recvmsgRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    int                 sockfd = req->data.args[0];
+    struct msghdr       *msg = (struct msghdr *) req->data.args[1];
+    int                 flags = req->data.args[2];
+
+    int result = recvmsg(sockfd, msg, flags);
+    resp->error = (result == -1) ? -errno : 0;
+    resp->val = result;
+    sendNotifResponse(resp);
+
+    struct msghdr *savedMsg = malloc(sizeof(struct msghdr));
+    if (savedMsg == NULL)
+        err(EXIT_FAILURE, "Failed to allocate memory to struct msghdr");
+    memcpy(savedMsg, msg, sizeof(struct msghdr));
+    *(curPointer++) = savedMsg;
+
+    sprintf(bufLog, "%0*X%0*lX%0*X\n", sizeof(short) * 2, req->data.nr, 
+                                        sizeof(struct msghdr *) * 2, savedMsg, 
+                                        sizeof(int) * 2, result);
+    write(logFd, bufLog, strlen(bufLog));
+}
+
+void
+shutdownRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    int     sockfd = req->data.args[0];
+    int     how = req->data.args[1];
+
+    int result = shutdown(sockfd, how);
+    resp->error = (result == -1) ? -errno : 0;
+    resp->val = result;
+    sendNotifResponse(resp);
+
+    sprintf(bufLog, "%0*X%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(int) * 2, result);
+    write(logFd, bufLog, strlen(bufLog));
+}
+
+void
+bindRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    int                     sockfd = req->data.args[0];
+    const struct sockaddr   *addr = (struct sockaddr *) req->data.args[1];
+    socklen_t               addrlen = (socklen_t) req->data.args[2];
+
+    int result = bind(sockfd, addr, addrlen);
+    resp->error = (result == -1) ? -errno : 0;
+    resp->val = result;
+    sendNotifResponse(resp);
+
+    sprintf(bufLog, "%0*X%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(int) * 2, result);
+    write(logFd, bufLog, strlen(bufLog));
+}
+
+void
+getsocknameRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    int                 sockfd = req->data.args[0];
+    struct sockaddr     *addr = (struct sockaddr *) req->data.args[1];
+    socklen_t           *addrlen = (socklen_t *) req->data.args[2];
+
+    int result = getsockname(sockfd, addr, addrlen);
+    resp->error = (result == -1) ? -errno : 0;
+    resp->val = result;
+    sendNotifResponse(resp);
+
+    struct sockaddr *savedSockaddr = malloc(sizeof(struct sockaddr));
+    if (savedSockaddr == NULL)
+        err(EXIT_FAILURE, "Failed to allocate memory to struct sockaddr");
+    memcpy(savedSockaddr, addr, sizeof(struct sockaddr));
+    *(curPointer++) = savedSockaddr;
+
+    socklen_t *savedAddrlen = malloc(sizeof(socklen_t));
+    if (savedAddrlen == NULL)
+        err(EXIT_FAILURE, "Failed to allocate memory to socklen_t");
+    memcpy(savedAddrlen, addrlen, sizeof(socklen_t));
+    *(curPointer++) = savedAddrlen;
+    
+    sprintf(bufLog, "%0*X%0*lX%0*lX%0*X\n", sizeof(short) * 2, req->data.nr, 
+                                            sizeof(struct sockaddr *) * 2, savedSockaddr, 
+                                            sizeof(socklen_t *) * 2, savedAddrlen, 
+                                            sizeof(int) * 2, result);
+    write(logFd, bufLog, strlen(bufLog));
+}
+
+void
+setsockoptRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    int             sockfd = req->data.args[0];
+    int             level = req->data.args[1];
+    int             optname = req->data.args[2];
+    const void      *optval = (void *) req->data.args[3];
+    socklen_t       optlen = req->data.args[4];
+
+    int result = setsockopt(sockfd, level, optname, optval, optlen);
+    resp->error = (result == -1) ? -errno : 0;
+    resp->val = result;
+    sendNotifResponse(resp);
+
+    sprintf(bufLog, "%0*X%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(int) * 2, result);
+    write(logFd, bufLog, strlen(bufLog));
+}
+
+void
+getsockoptRecord(struct seccomp_notif *restrict req, struct seccomp_notif_resp *restrict resp) {
+    int             sockfd = req->data.args[0];
+    int             level = req->data.args[1];
+    int             optname = req->data.args[2];
+    void            *optval = (void *) req->data.args[3];
+    socklen_t       *optlen = (socklen_t *) req->data.args[4];
+
+    int result = getsockopt(sockfd, level, optname, optval, optlen);
+    resp->error = (result == -1) ? -errno : 0;
+    resp->val = result;
+    sendNotifResponse(resp);
+
+    void *savedOptval = malloc(sizeof(char) * 256); // 256 bytes !!! is there a better way to do this?
+    if (savedOptval == NULL)
+        err(EXIT_FAILURE, "Failed to allocate memory to optval");
+    memcpy(savedOptval, optval, sizeof(char) * 256);
+    *(curPointer++) = savedOptval;
+
+    socklen_t *savedOptlen = malloc(sizeof(socklen_t));
+    if (savedOptlen == NULL)
+        err(EXIT_FAILURE, "Failed to allocate memory to optlen");
+    memcpy(savedOptlen, optlen, sizeof(socklen_t));
+    *(curPointer++) = savedOptlen;
+
+    sprintf(bufLog, "%0*X%0*lX%0*lX%0*X\n", sizeof(short) * 2, req->data.nr, 
+                                sizeof(void *) * 2, savedOptval, 
+                                sizeof(socklen_t) * 2, savedOptlen,
+                                sizeof(int) * 2, result);
+    write(logFd, bufLog, strlen(bufLog));
+}
+
+void
 newfstatatRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
     int             dirfd = req->data.args[0];
     const char      *pathname = (char *) req->data.args[1];
@@ -449,7 +628,7 @@ newfstatatRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
     memcpy(savedStat, buf, sizeof(struct stat64));
     *(curPointer++) = savedStat;
     // maybe %p instead of %lx? but %lx has correct amount of 0s
-    sprintf(bufLog, "%0*X%0*lx%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(struct stat64 *) * 2, savedStat, sizeof(int) * 2, result);
+    sprintf(bufLog, "%0*X%0*lX%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(struct stat64 *) * 2, savedStat, sizeof(int) * 2, result);
     write(logFd, bufLog, strlen(bufLog));
 }
 
@@ -606,6 +785,42 @@ handleNotifications(int notifyFd)
                     sprintf(bufLog, "%0*X%0*jd\n", sizeof(short) * 2, req->data.nr, sizeof(intmax_t) * 2, (intmax_t) resultOffset);
                     write(logFd, bufLog, strlen(bufLog));
                     break;
+
+                case SYS_socket:
+                    socketRecord(req, resp);
+                    break;
+
+                case SYS_connect:
+                    connectRecord(req, resp);
+                    break;
+
+                case SYS_sendto:
+                    sendtoRecord(req, resp);
+                    break;
+
+                case SYS_recvmsg:
+                    recvmsgRecord(req, resp);
+                    break;
+
+                case SYS_shutdown:
+                    shutdownRecord(req, resp);
+                    break;
+
+                case SYS_bind:
+                    bindRecord(req, resp);
+                    break;
+
+                case SYS_getsockname:
+                    getsocknameRecord(req, resp);
+                    break;
+
+                case SYS_setsockopt:
+                    setsockoptRecord(req, resp);
+                    break;
+
+                case SYS_getsockopt:
+                    getsockoptRecord(req, resp);
+                    break;
                 
                 case SYS_openat:
                     int dirfd = req->data.args[0];
@@ -636,6 +851,8 @@ handleNotifications(int notifyFd)
                 case SYS_prctl:
                 case SYS_munmap:
                 case SYS_rt_sigprocmask:
+                case SYS_rt_sigaction:
+                case SYS_ioctl:
                     printf("SKIPPED syscall nr: %d\n", req->data.nr);
                     sprintf(bufLog, "SKIPPED syscall nr: %d\n", req->data.nr);
                     resp->error = 0;

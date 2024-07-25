@@ -29,9 +29,9 @@
 #define ARRAY_SIZE(arr)  (sizeof(arr) / sizeof((arr)[0]))
 
 #ifdef DEBUG
-#define DEBUGPRINT(...) debugPrint(__VA_ARGS__)
+#define DEBUGPRINT(fmt, args...) fprintf(stderr, "DEBUG: " fmt "\n", ## args)
 #else
-#define DEBUGPRINT(...) 
+#define DEBUGPRINT(fmt, args...) // No operation
 #endif
 
 enum executionPhase {
@@ -632,6 +632,30 @@ newfstatatRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
     write(logFd, bufLog, strlen(bufLog));
 }
 
+void
+newfstatatRecover(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    int             dirfd = (int) req->data.args[0];
+    const char      *pathname = (char *) req->data.args[1];
+    struct stat64   *buf = (struct stat64 *) req->data.args[2];
+    int             flags = (int) req->data.args[3];
+
+    int result = read(logFd, bufLog, sizeof(struct stat64 *) * 2);     // not used, currently using from curPointer
+    if (result == -1)
+        err(EXIT_FAILURE, "newfstatat in recover");
+    bufLog[result] = '\0';
+
+    result = read(logFd, bufLog, sizeof(int) * 2);           // has result
+    if (result == -1)
+        err(EXIT_FAILURE, "Read from file in recover");
+    bufLog[result] = '\0';
+
+    result = strtol(bufLog, NULL, 16);
+    memcpy(buf, *(curPointer++), sizeof(struct stat64));
+    resp->val = result;
+
+    sendNotifResponse(resp);        // refactor so this isn't here !!!
+}
+
 /* Handle notifications that arrive via the SECCOMP_RET_USER_NOTIF file
     descriptor, 'notifyFd'. */
 
@@ -853,14 +877,14 @@ handleNotifications(int notifyFd)
                 case SYS_rt_sigprocmask:
                 case SYS_rt_sigaction:
                 case SYS_ioctl:
-                    printf("SKIPPED syscall nr: %d\n", req->data.nr);
-                    sprintf(bufLog, "SKIPPED syscall nr: %d\n", req->data.nr);
+                    DEBUGPRINT("SKIPPED syscall nr: %d\n", req->data.nr);
                     resp->error = 0;
                     resp->val = 0;
                     resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE; // emulate for new program, to see which syscalls are used
                     sendNotifResponse(resp);
 
-                    write(logFd, bufLog, strlen(bufLog));
+                    //sprintf(bufLog, "SKIPPED syscall nr: %d\n", req->data.nr);        // think how to skip them on recover...
+                    //write(logFd, bufLog, strlen(bufLog));
                     
                     continue;
 
@@ -1023,6 +1047,10 @@ handleNotifications(int notifyFd)
                     
                     //resp->val = resultFd; 
                     resp->val = syscallResult; 
+                    break;
+
+                case SYS_newfstatat:
+                    newfstatatRecover(req, resp);
                     break;
                     
                 default:

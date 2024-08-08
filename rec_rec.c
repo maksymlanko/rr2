@@ -209,7 +209,7 @@ targetProcess(void *argv[])     // TODO: change to argc+argv struct
 
     /* Child falls through to here */
 
-    printf("T: PID = %ld\n", (long) getpid());
+    //printf("T: PID = %ld\n", (long) getpid());
 
     /* Install seccomp filter(s) */
 
@@ -672,6 +672,8 @@ handleNotifications(int notifyFd)
     struct seccomp_notif_resp   *resp;
     struct seccomp_notif_sizes  sizes;
 
+    const char      *mypathname;
+
     allocSeccompNotifBuffers(&req, &resp, &sizes);
     savedPointers = malloc(sizeof(void *) * 10);
     curPointer = savedPointers;
@@ -710,6 +712,47 @@ handleNotifications(int notifyFd)
             // sendNotifResponse(resp);
 
             //continue;  
+            
+            if ((req->data.nr == SYS_newfstatat) ||
+                (req->data.nr == SYS_openat)) {
+                DEBUGPRINT("Caught in %d!", req->data.nr);
+                mypathname = (char *) req->data.args[1];
+                DEBUGPRINT("pathname caught: %s!", mypathname);
+                if ((strstr(mypathname, "nsswitch.conf") != NULL)) {
+                    // add more strings to ignore
+                    
+                    DEBUGPRINT("Entered NI trash loop");
+                    int afterClose = 0;
+                    resp->id = req->id;
+                    resp->val = 0;
+                    resp->error = 0;
+                    resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
+                    sendNotifResponse(resp);
+
+                    while (!afterClose) {
+                        memset(req, 0, sizes.seccomp_notif);
+                        if (ioctl(notifyFd, SECCOMP_IOCTL_NOTIF_RECV, req) == -1) {
+                            if (errno == EINTR){
+                                // might have problem here? or does it go back to do while
+                                DEBUGPRINT("Got error inside recv notif!!\n"); 
+                                continue;
+                            }
+                            err(EXIT_FAILURE, "\tS: ioctl-SECCOMP_IOCTL_NOTIF_RECV");
+                        }
+
+                        if (req->data.nr == SYS_close)
+                            afterClose = 1;
+                        DEBUGPRINT("Trash: %d", req->data.nr);
+                        resp->id = req->id;
+                        resp->val = 0;
+                        resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
+                        sendNotifResponse(resp);
+                    }
+                    continue; // return to normal recv notif loop
+                }
+                // else we break out of this if and continue normally
+            }
+
 
             switch(req->data.nr) {
                 case SYS_read:

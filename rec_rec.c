@@ -153,7 +153,9 @@ callJavaProgram(int argc, char **argv)
         err(EXIT_FAILURE, "JNI_CreateJavaVM %d", rc);
     free(options);
 
-    jclass cls = (*env)->FindClass(env, "md6reflection");
+    DEBUGPRINT("argv[0] in JVM: %s", argv[0]);
+
+    jclass cls = (*env)->FindClass(env, argv[0]);
     if (cls == NULL)
         err(EXIT_FAILURE, "FindClass");
 
@@ -652,8 +654,6 @@ newfstatatRecover(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
     result = strtol(bufLog, NULL, 16);
     memcpy(buf, *(curPointer++), sizeof(struct stat64));
     resp->val = result;
-
-    sendNotifResponse(resp);        // refactor so this isn't here !!!
 }
 
 /* Handle notifications that arrive via the SECCOMP_RET_USER_NOTIF file
@@ -704,7 +704,7 @@ handleNotifications(int notifyFd)
             resp->id = req->id;
             resp-> flags = 0;
 
-            // printf("RECORD syscall nr: %d\n", req->data.nr);
+            printf("RECORD syscall nr: %d\n", req->data.nr);
             // resp->val = 0;
             // resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE; // emulate for new program, to see which syscalls are used
             // sendNotifResponse(resp);
@@ -877,6 +877,9 @@ handleNotifications(int notifyFd)
                 case SYS_rt_sigprocmask:
                 case SYS_rt_sigaction:
                 case SYS_ioctl:
+                case SYS_pread64:       // for JVM
+                case SYS_readlink:
+                case SYS_getcwd:        // is this one supposed to be here..?
                     DEBUGPRINT("SKIPPED syscall nr: %d\n", req->data.nr);
                     resp->error = 0;
                     resp->val = 0;
@@ -961,7 +964,8 @@ handleNotifications(int notifyFd)
 
                     /* temp way to change to IGNORE again after finishing RECOVER copy */
                     writeCounter++;
-                    if (writeCounter == 2){
+                    printf("Write number %d\n", writeCounter);
+                    if (writeCounter == 8){     // for md6reflection its 2 !!!
                         phase = IGNORE;
                         printf("\t\tFINISHED RECOVERY, CONTINUING\n");
                     }
@@ -1053,6 +1057,24 @@ handleNotifications(int notifyFd)
                     newfstatatRecover(req, resp);
                     break;
                     
+                case SYS_pread64:       // for JVM
+                case SYS_readlink:
+                case SYS_getcwd:        // is this one supposed to be here..?
+                case SYS_mmap:
+                case SYS_munmap:
+                case SYS_mprotect:
+                    DEBUGPRINT("SKIPPED syscall nr: %d\n", req->data.nr);
+                    resp->error = 0;
+                    resp->val = 0;
+                    resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE; // emulate for new program, to see which syscalls are used
+                    sendNotifResponse(resp);
+
+                    //sprintf(bufLog, "SKIPPED syscall nr: %d\n", req->data.nr);        // think how to skip them on recover...
+                    //write(logFd, bufLog, strlen(bufLog));
+                    
+                    lseek(logFd, -4, SEEK_CUR);      // go back 4 chars of syscall we didnt use !!!
+                    continue;
+
                 default:
                     printf("Received syscall nr: %d\n", req->data.nr);
                     resp->id = req->id;

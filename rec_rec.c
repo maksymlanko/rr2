@@ -24,6 +24,8 @@
 #include <pthread.h>
 #include "libwrapperexample.h"
 #include <jni.h>
+#include <netinet/in.h>
+#include <linux/netlink.h>
 
 
 #define ARRAY_SIZE(arr)  (sizeof(arr) / sizeof((arr)[0]))
@@ -47,6 +49,7 @@ int                         logFd;
 char                        bufLog[1024] = {0};
 enum executionPhase         phase;
 void                        **curPointer;
+int                         curCounter = 0;
 
 void debugPrint(const char *fmt, ...) {
     char debugBuf[1024];  // Adjust size as needed
@@ -388,6 +391,10 @@ sendNotifResponse(struct seccomp_notif_resp *resp){
     }
 }
 
+int isFdUsed(int fd) {
+    return fcntl(fd, F_GETFD) != -1;
+}
+
 void 
 serializeStat(struct stat some_stat, int fd){
 
@@ -431,6 +438,38 @@ printPath(int fd){
 }
 
 void
+readRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    int     fd = req->data.args[0];
+    void    *buf = (void *) req->data.args[1];
+    size_t  count = (size_t) req->data.args[2];
+    int     result;
+
+    result = read(fd, buf, count);
+    if (result == -1)
+        err(EXIT_FAILURE, "Failed to emulate read");
+
+    resp->error = (result == -1) ? -errno : 0;
+    resp->val = result;
+
+    char *savedBuf = malloc(sizeof(char) * (result + 1));
+    if (savedBuf == NULL)
+        err(EXIT_FAILURE, "Failed to allocate memory to savedBuf");
+
+    memcpy(savedBuf, buf, sizeof(char) * result);
+    savedBuf[result] = '\0'; // TODO: pode nao ser preciso isto // pode dar erro
+
+
+    DEBUGPRINT("Read %d bytes", result);
+    DEBUGPRINT("savedBuf content:\n%s", savedBuf);
+    *(curPointer++) = savedBuf;
+    curCounter++;
+
+    sprintf(bufLog, "%0*X%0*lX%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(char *) * 2, savedBuf, sizeof(int) * 2, result);
+    write(logFd, bufLog, strlen(bufLog));
+    sendNotifResponse(resp);
+}
+
+void
 socketRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
     int     domain = req->data.args[0];
     int     type = req->data.args[1];
@@ -439,10 +478,11 @@ socketRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
     int result = socket(domain, type, protocol);
     resp->error = (result == -1) ? -errno : 0;
     resp->val = result;
-    sendNotifResponse(resp);
 
+    DEBUGPRINT("Recover socket: domain=%d, type=%d, protocol=%d, result=%d", domain, type, protocol, result);
     sprintf(bufLog, "%0*X%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(int) * 2, result);
     write(logFd, bufLog, strlen(bufLog));
+    sendNotifResponse(resp);
 }
 
 void
@@ -478,6 +518,7 @@ sendtoRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
     write(logFd, bufLog, strlen(bufLog));
 }
 
+/* not used, something was breaking, check backup file for ideas */
 void
 recvmsgRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
     int                 sockfd = req->data.args[0];
@@ -535,29 +576,58 @@ getsocknameRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
     int                 sockfd = req->data.args[0];
     struct sockaddr     *addr = (struct sockaddr *) req->data.args[1];
     socklen_t           *addrlen = (socklen_t *) req->data.args[2];
+    size_t              size;
 
     int result = getsockname(sockfd, addr, addrlen);
     resp->error = (result == -1) ? -errno : 0;
     resp->val = result;
-    sendNotifResponse(resp);
+    DEBUGPRINT("addr->sa_family=%u", addr->sa_family);
 
-    struct sockaddr *savedSockaddr = malloc(sizeof(struct sockaddr));
+    switch(addr->sa_family){
+        case AF_INET:
+            size = sizeof(struct sockaddr_in);
+            DEBUGPRINT("getsockname record: sizeof(struct sockaddr_in)=%d", size);
+            break;
+        case AF_NETLINK:
+            size = sizeof(struct sockaddr_nl);
+            DEBUGPRINT("getsockname record: sizeof(struct sockaddr_nl)=%d", size);
+            break;
+        case AF_INET6:
+            size = sizeof(struct sockaddr_in6);
+            DEBUGPRINT("getsockname record: sizeof(struct sockaddr_in6)=%d", size);
+            struct sockaddr_in6   *addr_in6 = (struct sockaddr_in6 *) req->data.args[1];
+            DEBUGPRINT("AFTER getsockname record sin6_scope_id=%u", addr_in6->sin6_scope_id);
+            break;
+        default:
+            size = sizeof(struct sockaddr_storage);
+            DEBUGPRINT("getsockname record: sizeof(struct sockaddr_storage)=%d", size);
+            break;
+    }
+
+    struct sockaddr *savedSockaddr = malloc(size);
+    memset(savedSockaddr, 0, size);
     if (savedSockaddr == NULL)
         err(EXIT_FAILURE, "Failed to allocate memory to struct sockaddr");
-    memcpy(savedSockaddr, addr, sizeof(struct sockaddr));
+    memcpy(savedSockaddr, addr, size);
     *(curPointer++) = savedSockaddr;
+    curCounter++;
+    DEBUGPRINT("curCounter=%d\n\n\n", curCounter);
 
     socklen_t *savedAddrlen = malloc(sizeof(socklen_t));
     if (savedAddrlen == NULL)
         err(EXIT_FAILURE, "Failed to allocate memory to socklen_t");
     memcpy(savedAddrlen, addrlen, sizeof(socklen_t));
     *(curPointer++) = savedAddrlen;
-    
+    curCounter++;
+    DEBUGPRINT("curCounter=%d\n\n\n", curCounter);
+
+    DEBUGPRINT("Record getsockname: sockfd=%d, addr->data=%s, addrlen=%d, result=%d", sockfd, addr->sa_data, *addrlen, result);
     sprintf(bufLog, "%0*X%0*lX%0*lX%0*X\n", sizeof(short) * 2, req->data.nr, 
                                             sizeof(struct sockaddr *) * 2, savedSockaddr, 
                                             sizeof(socklen_t *) * 2, savedAddrlen, 
                                             sizeof(int) * 2, result);
     write(logFd, bufLog, strlen(bufLog));
+    sendNotifResponse(resp);
 }
 
 void
@@ -571,10 +641,10 @@ setsockoptRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
     int result = setsockopt(sockfd, level, optname, optval, optlen);
     resp->error = (result == -1) ? -errno : 0;
     resp->val = result;
-    sendNotifResponse(resp);
 
     sprintf(bufLog, "%0*X%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(int) * 2, result);
     write(logFd, bufLog, strlen(bufLog));
+    sendNotifResponse(resp);
 }
 
 void
@@ -584,29 +654,36 @@ getsockoptRecord(struct seccomp_notif *restrict req, struct seccomp_notif_resp *
     int             optname = req->data.args[2];
     void            *optval = (void *) req->data.args[3];
     socklen_t       *optlen = (socklen_t *) req->data.args[4];
+    int             result;
 
-    int result = getsockopt(sockfd, level, optname, optval, optlen);
+    result = getsockopt(sockfd, level, optname, optval, optlen);
     resp->error = (result == -1) ? -errno : 0;
     resp->val = result;
-    sendNotifResponse(resp);
-
-    void *savedOptval = malloc(sizeof(char) * 256); // 256 bytes !!! is there a better way to do this?
-    if (savedOptval == NULL)
-        err(EXIT_FAILURE, "Failed to allocate memory to optval");
-    memcpy(savedOptval, optval, sizeof(char) * 256);
-    *(curPointer++) = savedOptval;
 
     socklen_t *savedOptlen = malloc(sizeof(socklen_t));
     if (savedOptlen == NULL)
         err(EXIT_FAILURE, "Failed to allocate memory to optlen");
-    memcpy(savedOptlen, optlen, sizeof(socklen_t));
+    *savedOptlen = *optlen;
     *(curPointer++) = savedOptlen;
+    curCounter++;
+    DEBUGPRINT("curCounter=%d\n", curCounter);
 
-    sprintf(bufLog, "%0*X%0*lX%0*lX%0*X\n", sizeof(short) * 2, req->data.nr, 
-                                sizeof(void *) * 2, savedOptval, 
-                                sizeof(socklen_t) * 2, savedOptlen,
-                                sizeof(int) * 2, result);
+    void *savedOptval = malloc(*optlen);
+    if (savedOptval == NULL)
+        err(EXIT_FAILURE, "Failed to allocate memory to optval");
+    memcpy(savedOptval, optval, *optlen);
+    *(curPointer++) = savedOptval;
+    curCounter++;
+    DEBUGPRINT("curCounter=%d\n", curCounter);
+
+    sprintf(bufLog, "%0*X%0*lX%0*lX%0*X\n",
+            sizeof(short) * 2, req->data.nr,
+            sizeof(socklen_t *) * 2, (unsigned long)savedOptlen,
+            sizeof(void *) * 2, (unsigned long)savedOptval,
+            sizeof(int) * 2, result);
+    
     write(logFd, bufLog, strlen(bufLog));
+    sendNotifResponse(resp);
 }
 
 void
@@ -622,17 +699,37 @@ newfstatatRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
 
     resp->error = (result == -1) ? -errno : 0;
     resp->val = result;
-    sendNotifResponse(resp);
+
+    DEBUGPRINT("pathname is: %s", pathname);
+    char *savedPath = malloc(sizeof(char) * PATH_MAX);
+    if (savedPath == NULL)
+        err(EXIT_FAILURE, "Failed to allocate memory to char *");
+    memcpy(savedPath, pathname, PATH_MAX);
+    //*(curPointer++) = savedPath;
+    *curPointer = savedPath;
+    DEBUGPRINT("\n\n\n\ncurPointer has saved %s at %lX", *curPointer, *curPointer);
+    curPointer++;
+    curCounter++;
+    DEBUGPRINT("curCounter=%d\n\n\n", curCounter);
+    DEBUGPRINT("savedPath str: %s\nsavedPath ptr: %lX", savedPath, savedPath);
 
     struct stat64 *savedStat = malloc(sizeof(struct stat));
     if (savedStat == NULL)
         err(EXIT_FAILURE, "Failed to allocate memory to struct stat");
     memcpy(savedStat, buf, sizeof(struct stat64));
     *(curPointer++) = savedStat;
-    // maybe %p instead of %lx? but %lx has correct amount of 0s
-    sprintf(bufLog, "%0*X%0*lX%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(struct stat64 *) * 2, savedStat, sizeof(int) * 2, result);
+    curCounter++;
+    DEBUGPRINT("curCounter=%d\n\n\n", curCounter);
+
+    sprintf(bufLog, "%0*X%0*lX%0*lX%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(char *) * 2, savedPath, 
+                                            sizeof(struct stat64 *) * 2, savedStat, sizeof(int) * 2, result);
     write(logFd, bufLog, strlen(bufLog));
+    sendNotifResponse(resp);
 }
+
+
+
+/* RECOVERY */
 
 void
 newfstatatRecover(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
@@ -640,8 +737,14 @@ newfstatatRecover(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
     const char      *pathname = (char *) req->data.args[1];
     struct stat64   *buf = (struct stat64 *) req->data.args[2];
     int             flags = (int) req->data.args[3];
+    int             result;
 
-    int result = read(logFd, bufLog, sizeof(struct stat64 *) * 2);     // not used, currently using from curPointer
+    result = read(logFd, bufLog, sizeof(char *) * 2);     // pathname not used here
+    if (result == -1)
+        err(EXIT_FAILURE, "newfstatat in recover: savedPath");
+    bufLog[result] = '\0';
+
+    result = read(logFd, bufLog, sizeof(struct stat64 *) * 2);     // not used, currently using from curPointer
     if (result == -1)
         err(EXIT_FAILURE, "newfstatat in recover");
     bufLog[result] = '\0';
@@ -653,7 +756,258 @@ newfstatatRecover(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
 
     result = strtol(bufLog, NULL, 16);
     memcpy(buf, *(curPointer++), sizeof(struct stat64));
+    curCounter++;
+    DEBUGPRINT("curCounter=%d\n\n\n", curCounter);
     resp->val = result;
+}
+
+void
+socketRecover(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    int     domain = req->data.args[0];
+    int     type = req->data.args[1];
+    int     protocol = req->data.args[2];
+    int     result;
+
+    ssize_t numRead = read(logFd, bufLog, sizeof(int) * 2);
+    if (numRead == -1)
+        err(EXIT_FAILURE, "Read from file in recover");
+    bufLog[numRead] = '\0';
+    result = strtol(bufLog, NULL, 16);
+
+    while (isFdUsed(result)){
+        DEBUGPRINT("SOCKET %d ALREADY IN USE !!!", result);
+        result++;
+    }
+    DEBUGPRINT("Recover socket: domain=%d, type=%d, protocol=%d, result=%d", domain, type, protocol, result);
+    resp->val = result;       
+}
+
+void
+connectRecover(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    int                     sockfd = req->data.args[0];
+    const struct sockaddr   *addr = (struct sockaddr *) req->data.args[1];
+    socklen_t               addrlen = (socklen_t) req->data.args[2];
+    int                     result;
+
+    result = read(logFd, bufLog, sizeof(int) * 2);
+    if (result == -1)
+        err(EXIT_FAILURE, "Read from file in recover");
+    bufLog[result] = '\0';
+
+    result = strtol(bufLog, NULL, 16);
+    DEBUGPRINT("Recover connect: sockfd=%d, addr->data=%s, addrlen=%d, result=%d", sockfd, addr->sa_data, addrlen, result);
+    resp->val = result;       
+}
+
+void
+sendtoRecover(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    int                     sockfd = req->data.args[0];
+    const void              *buf = (const void *) req->data.args[1];
+    size_t                  len = (socklen_t) req->data.args[2];
+    int                     flags = req->data.args[3];
+    const struct sockaddr   *dest_addr = (const struct sockaddr *) req->data.args[4];
+    socklen_t               addrlen = (socklen_t) req->data.args[5];
+    int                     result;
+
+    result = read(logFd, bufLog, sizeof(ssize_t) * 2);
+    if (result == -1)
+        err(EXIT_FAILURE, "Read from file in recover");
+    bufLog[result] = '\0';
+    result = strtol(bufLog, NULL, 16);
+
+    DEBUGPRINT("Recover sendto: result=%zd", result);
+    resp->val = result;       
+}
+
+/* not used, something was breaking, check backup file for ideas */
+void recvmsgRecover(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    int sockfd = req->data.args[0];
+    struct msghdr *msg = (struct msghdr *) req->data.args[1];
+    int flags = req->data.args[2];
+
+    DEBUGPRINT("NOT IMPLEMENTED RECVMSG RECOVER");
+    exit(0);
+}
+
+void
+shutdownRecover(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    int     sockfd = req->data.args[0];
+    int     how = req->data.args[1];
+    int     result;
+
+    result = read(logFd, bufLog, sizeof(int) * 2);
+    if (result == -1)
+        err(EXIT_FAILURE, "Read from file in recover");
+    bufLog[result] = '\0';
+    result = strtol(bufLog, NULL, 16);
+
+    resp->val = result;
+}
+
+void
+bindRecover(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    int                     sockfd = req->data.args[0];
+    struct sockaddr         *addr = (struct sockaddr *) req->data.args[1];;
+    socklen_t               addrlen = (socklen_t) req->data.args[2];
+    int                     result;
+
+    ssize_t numRead = read(logFd, bufLog, sizeof(int) * 2);
+    if (numRead == -1)
+        err(EXIT_FAILURE, "Read from file in recover");
+    bufLog[numRead] = '\0';
+    result = strtol(bufLog, NULL, 16);
+
+    DEBUGPRINT("Recover bind: sockfd=%d, addr->data=%s, addrlen=%d, result=%d", sockfd, addr->sa_data, addrlen, result);
+    resp->val = result;       
+}
+
+void
+setsockoptRecover(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    int result = read(logFd, bufLog, sizeof(int) * 2);
+    if (result == -1)
+        err(EXIT_FAILURE, "setsockopt recover");
+    bufLog[result] = '\0';
+    result = strtol(bufLog, NULL, 16);
+    
+    DEBUGPRINT("RECOVER setsockopt: %d\n", result);
+    resp->val = result;
+}
+
+void getsockoptRecover(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    int         sockfd = req->data.args[0];
+    int         level = req->data.args[1];
+    int         optname = req->data.args[2];
+    void        *optval = (void *) req->data.args[3];
+    socklen_t   *optlen = (socklen_t *) req->data.args[4];
+    int         result;
+
+    result = read(logFd, bufLog, sizeof(socklen_t *) * 2);
+    if (result == -1)
+        err(EXIT_FAILURE, "getsockopt recover");
+    bufLog[result] = '\0';
+
+    memcpy(optlen, *(curPointer++), sizeof(socklen_t));
+    curCounter++;
+    DEBUGPRINT("curCounter=%d\n\n\n", curCounter);
+
+    result = read(logFd, bufLog, sizeof(void *) * 2);
+    if (result == -1)
+        err(EXIT_FAILURE, "getsockopt recover");
+    bufLog[result] = '\0';
+
+    memcpy(optval, *(curPointer++), *optlen);
+    curCounter++;
+    DEBUGPRINT("curCounter=%d\n\n\n", curCounter);
+    
+    result = read(logFd, bufLog, sizeof(int) * 2);
+    if (result == -1)
+        err(EXIT_FAILURE, "setsockopt recover");
+    bufLog[result] = '\0';
+    result = strtol(bufLog, NULL, 16);
+
+    resp->val = result;
+}
+
+void
+getsocknameRecover(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    int                 sockfd = req->data.args[0];
+    struct sockaddr     *addr = (struct sockaddr *) req->data.args[1];
+    socklen_t           *addrlen = (socklen_t *) req->data.args[2];
+    int                 result;
+
+    result = read(logFd, bufLog, sizeof(struct sockaddr *) * 2); // not used, currently using from curPointer
+    if (result == -1)
+        err(EXIT_FAILURE, "Read from file in recover");
+    bufLog[result] = '\0';
+    
+    struct sockaddr *temp = (struct sockaddr *) *curPointer;
+    DEBUGPRINT("temp->sa_family=%u", temp->sa_family);
+
+    size_t size;
+    switch (temp->sa_family) {
+        case AF_INET:
+            size = sizeof(struct sockaddr_in);
+            DEBUGPRINT("getsockname size=%d", size);
+            struct sockaddr_in   *addr_in = (struct sockaddr_in *) req->data.args[1];
+            break;
+        case AF_INET6:
+            size = sizeof(struct sockaddr_in6);
+            DEBUGPRINT("getsockname size=%d", size);
+            break;
+        case AF_NETLINK:
+            size = sizeof(struct sockaddr_nl);
+            DEBUGPRINT("getsockname size=%d", size);
+            struct sockaddr_nl   *addr_nl = (struct sockaddr_nl *) req->data.args[1];
+            break;
+        default:
+            size = sizeof(struct sockaddr_storage);
+            DEBUGPRINT("getsockname size=%d", size);
+            struct sockaddr_storage  *addr_storage = (struct sockaddr_storage *) req->data.args[1];
+            break;
+    }
+
+    memcpy(addr, *(curPointer++), size);
+    curCounter++;
+    DEBUGPRINT("curCounter=%d\n\n\n", curCounter);
+    DEBUGPRINT("GETSOCKNAME addr->sa_data=%s", addr->sa_data);
+
+    result = read(logFd, bufLog, sizeof(socklen_t *) * 2);     // not used, currently using from curPointer
+    if (result == -1)
+        err(EXIT_FAILURE, "newfstatat in recover");
+    bufLog[result] = '\0';
+
+    memcpy(addrlen, *(curPointer++), sizeof(socklen_t));
+    curCounter++;
+    DEBUGPRINT("curCounter=%d\n\n\n", curCounter);
+
+    result = read(logFd, bufLog, sizeof(int) * 2);
+    if (result == -1)
+        err(EXIT_FAILURE, "newfstatat in recover");
+    bufLog[result] = '\0';
+    result = strtol(bufLog, NULL, 16);
+
+    DEBUGPRINT("Recover getsockname: sockfd=%d, addr->data=%s, addrlen=%d, result=%d", sockfd, addr->sa_data, *addrlen, result);
+    resp->val = result;   
+}
+
+void
+skipSyscall(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
+    resp->id = req->id;
+    resp->error = 0;
+    resp->val = 0;
+    resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
+    sendNotifResponse(resp);
+}
+
+void
+advanceTillClose(struct seccomp_notif *req, struct seccomp_notif_resp *resp, struct seccomp_notif_sizes  sizes) {
+    int afterClose = 0;
+    resp->id = req->id;
+    resp->val = 0;
+    resp->error = 0;
+    resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
+    sendNotifResponse(resp);
+
+    while (!afterClose) {
+        memset(req, 0, sizes.seccomp_notif);
+        if (ioctl(notifyFd, SECCOMP_IOCTL_NOTIF_RECV, req) == -1) {
+            if (errno == EINTR){
+                // might have problem here? or does it go back to do while
+                DEBUGPRINT("Got error inside recv notif!!\n"); 
+                // this probably stops working...?
+                continue;
+            }
+            err(EXIT_FAILURE, "\tS: ioctl-SECCOMP_IOCTL_NOTIF_RECV");
+        }
+
+        if (req->data.nr == SYS_close)
+            afterClose = 1;
+        DEBUGPRINT("Trash: %d", req->data.nr);
+        resp->id = req->id;
+        resp->val = 0;
+        resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
+        sendNotifResponse(resp);
+    }
 }
 
 /* Handle notifications that arrive via the SECCOMP_RET_USER_NOTIF file
@@ -672,10 +1026,11 @@ handleNotifications(int notifyFd)
     struct seccomp_notif_resp   *resp;
     struct seccomp_notif_sizes  sizes;
 
-    const char      *mypathname;
+    char                        *mypathname;
+    int                         myDomain;
 
     allocSeccompNotifBuffers(&req, &resp, &sizes);
-    savedPointers = malloc(sizeof(void *) * 10);
+    savedPointers = malloc(sizeof(void *) * 100);
     curPointer = savedPointers;
     logFd = open("execution.log", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH); // TODO: also log targetProcess prints?
     macro_test = open("logfile", O_WRONLY | O_CREAT | O_TRUNC, 0644);
@@ -718,41 +1073,34 @@ handleNotifications(int notifyFd)
                 DEBUGPRINT("Caught in %d!", req->data.nr);
                 mypathname = (char *) req->data.args[1];
                 DEBUGPRINT("pathname caught: %s!", mypathname);
-                if ((strstr(mypathname, "nsswitch.conf") != NULL)) {
-                    // add more strings to ignore
-                    
-                    DEBUGPRINT("Entered NI trash loop");
-                    int afterClose = 0;
-                    resp->id = req->id;
-                    resp->val = 0;
-                    resp->error = 0;
-                    resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
-                    sendNotifResponse(resp);
 
-                    while (!afterClose) {
-                        memset(req, 0, sizes.seccomp_notif);
-                        if (ioctl(notifyFd, SECCOMP_IOCTL_NOTIF_RECV, req) == -1) {
-                            if (errno == EINTR){
-                                // might have problem here? or does it go back to do while
-                                DEBUGPRINT("Got error inside recv notif!!\n"); 
-                                continue;
-                            }
-                            err(EXIT_FAILURE, "\tS: ioctl-SECCOMP_IOCTL_NOTIF_RECV");
-                        }
-
-                        if (req->data.nr == SYS_close)
-                            afterClose = 1;
-                        DEBUGPRINT("Trash: %d", req->data.nr);
-                        resp->id = req->id;
-                        resp->val = 0;
-                        resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE;
-                        sendNotifResponse(resp);
-                    }
-                    continue; // return to normal recv notif loop
+                if ((strstr(mypathname, "nsswitch.conf") != NULL) || 
+                    (strstr(mypathname, "resolv.conf") != NULL) || 
+                    (strstr(mypathname, "libnss_mymachines.so") != NULL) || 
+                    (strstr(mypathname, "libcap.so") != NULL) || 
+                    (strstr(mypathname, "libnss_mdns_minimal.so") != NULL) || 
+                    (strstr(mypathname, "ld.so.cache") != NULL) || 
+                    (strstr(mypathname, "libnss_resolve.so") != NULL) || 
+                    (strstr(mypathname, "gai.conf") != NULL)) {
+                        // also libgcc, libresolv, libm.so.6 ..?
+                        DEBUGPRINT("Entered NI trash loop: %s", mypathname);
+                        advanceTillClose(req, resp, sizes);
+                        continue; // return to normal recv notif loop
                 }
-                // else we break out of this if and continue normally
             }
 
+            if (req->data.nr == SYS_socket) {
+                DEBUGPRINT("Caught in %d!", req->data.nr);
+                myDomain = req->data.args[0];
+                DEBUGPRINT("domain caught: %d!", myDomain);
+
+                if (myDomain == AF_NETLINK) {
+                        // because we cant replay recvmsg :/
+                        DEBUGPRINT("Entered NI trash loop: %s", mypathname);
+                        advanceTillClose(req, resp, sizes);
+                        continue; // return to normal recv notif loop
+                }
+            }
 
             switch(req->data.nr) {
                 case SYS_read:
@@ -775,6 +1123,9 @@ handleNotifications(int notifyFd)
                     savedBuf[bytesRead] = '\0'; // TODO: pode nao ser preciso isto // pode dar erro
                     //printf("savedBuf content: %s\n", savedBuf);
                     *(curPointer++) = savedBuf;
+                    curCounter++;
+                    DEBUGPRINT("curCounter=%d\n\n\n", curCounter);
+
                     //DEBUGPRINT("%0*X%0*lx%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(char *) * 2, savedBuf, sizeof(int) * 2, bytesRead);
                     sprintf(bufLog, "%0*X%0*lx%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(char *) * 2, savedBuf, sizeof(int) * 2, bytesRead);
                     write(logFd, bufLog, strlen(bufLog));
@@ -826,11 +1177,18 @@ handleNotifications(int notifyFd)
                     sendNotifResponse(resp);
 
                     struct stat *savedStat = malloc(sizeof(struct stat));
-                    printf("savedStat saved at: %p\n", savedStat);
+                    DEBUGPRINT("savedStat saved at: %p\n", savedStat);
                     if (savedStat == NULL)
                         err(EXIT_FAILURE, "Failed to allocate memory to struct stat");
                     memcpy(savedStat, sys_buf2, sizeof(struct stat));
                     *(curPointer++) = savedStat;
+                    curCounter++;
+                    DEBUGPRINT("curCounter=%d\n\n\n", curCounter);
+
+                    DEBUGPRINT("RECORD fstat: fd=%d, user_statbuf=%p, original_result=%d\n", 
+                        fd2, (void*) sys_buf2, resultFstat);
+                    DEBUGPRINT("  st_size=%ld, st_mode=%o\n", sys_buf2->st_size, sys_buf2->st_mode);
+
                     // maybe %p instead of %lx? but %lx has correct amount of 0s
                     sprintf(bufLog, "%0*X%0*lx%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(struct stat *) * 2, savedStat, sizeof(int) * 2, resultFstat);
                     write(logFd, bufLog, strlen(bufLog));                    
@@ -896,14 +1254,22 @@ handleNotifications(int notifyFd)
                     mode_t mode = req->data.args[3];
 
                     int responseFd = openat(dirfd, pathname, flags, mode);
-                    //if (responseFd == -1)
-                    //    err(EXIT_FAILURE, "Failed to emulate openat");
-
                     resp->error = (responseFd == -1) ? -errno : 0;
                     resp->val = responseFd;
                     sendNotifResponse(resp);
 
-                    sprintf(bufLog, "%0*X%0*zX\n", sizeof(short) * 2, req->data.nr, sizeof(long) * 2, responseFd);
+                    DEBUGPRINT("strlen of pathname = %d", strlen(pathname));
+                    char *savedPath = malloc(sizeof(char) * PATH_MAX);
+                    if (savedPath == NULL)
+                        err(EXIT_FAILURE, "Failed to allocate memory to char *");
+                    strncpy(savedPath, pathname, strlen(pathname));
+                    savedPath[strlen(pathname)] = '\0';  // Ensure null termination
+                    *(curPointer++) = savedPath;
+                    curCounter++;
+                    DEBUGPRINT("curCounter=%d\n\n\n", curCounter);
+                    DEBUGPRINT("savedPath str openat: %s + savedPath ptr: %lX", savedPath, savedPath);
+
+                    sprintf(bufLog, "%0*X%0*lX%0*zX\n", sizeof(short) * 2, req->data.nr, sizeof(char *) * 2, savedPath, sizeof(long) * 2, responseFd);
                     write(logFd, bufLog, strlen(bufLog));
                     break;
 
@@ -950,11 +1316,15 @@ handleNotifications(int notifyFd)
             phase = RECOVER;
             off_t lseekResult = lseek(logFd, 0, SEEK_SET); // add error checking
             curPointer = savedPointers;
+            curCounter = 0;
         } 
         // separate from previous if-else block so that we can reset the file and move here
         if (phase == RECOVER) {
-            char newBuf[200] = {0};
-            ssize_t numRead;
+            char            newBuf[200] = {0};
+            ssize_t         numRead;
+            long int        syscallResult;
+            long int        syscallNumber;
+            unsigned long   addr;
 
             resp->id = req->id;
             resp-> flags = 0;
@@ -964,39 +1334,112 @@ handleNotifications(int notifyFd)
             if (numRead == -1)
                 err(EXIT_FAILURE, "Read from file in recover");
             newBuf[numRead] = '\0';
-            //printf("Read from file: %s\n", newBuf);
-            long int syscallNumber = strtol(newBuf, NULL, 16);
-            //printf("Emulating syscall nr: %d\n", syscallNumber);
 
-            long int        syscallResult;
-            /*
-            numRead = read(logFd, newBuf, sizeof(ssize_t) * 2); // we cant use this because it might be different size
-            if (numRead == -1)
-                err(EXIT_FAILURE, "Read from file in recover");
-            */
+            if (numRead == 0){
+                DEBUGPRINT("END OF FILE !!!!!!");
+                phase = IGNORE;
+                skipSyscall(req, resp);
+                //exit(0);
+                continue;
+            }
 
-            printf("req->data.nr = %d\n", req->data.nr);
+            syscallNumber = strtol(newBuf, NULL, 16);
+            DEBUGPRINT("SYSCALLS: log=%d curr=%d", syscallNumber, req->data.nr);
+
+            if (req->data.nr != syscallNumber) {
+                skipSyscall(req, resp);
+                lseek(logFd, -4, SEEK_CUR);      
+                continue;
+            }
+
+            if ((req->data.nr == SYS_newfstatat) ||
+                (req->data.nr == SYS_openat)) {
+
+                mypathname = (char *) req->data.args[1];
+                DEBUGPRINT("RECOVER pathname caught: %s!", mypathname);
+                
+                if ((strstr(mypathname, "nsswitch.conf") != NULL) ||
+                    (strstr(mypathname, "META-INF") != NULL)      || 
+                    (strstr(mypathname, "resolv.conf") != NULL) ) {
+                        DEBUGPRINT("Skipped JVM syscall: %s", mypathname);
+                        skipSyscall(req, resp);
+                        lseek(logFd, -4, SEEK_CUR);
+                        continue;
+                }
+
+                if ((strstr(mypathname, "libnet.so") != NULL) || 
+                    (strstr(mypathname, "if_inet6") != NULL) || 
+                    (strstr(mypathname, "libnio.so") != NULL) || 
+                    (strstr(mypathname, "libjimage.so") != NULL) ||
+                    (strstr(mypathname, "java.security") != NULL) ||
+                    (strstr(mypathname, "cpu.max") != NULL) || 
+                    (strstr(mypathname, "libextnet.so") != NULL) || 
+                    (strstr(mypathname, "net.properties") != NULL) ) {
+                        DEBUGPRINT("Entered JVM trash loop: %s", mypathname);
+                        advanceTillClose(req, resp, sizes);
+                        lseek(logFd, -4, SEEK_CUR);
+                        continue;
+                    }
+
+                numRead = read(logFd, newBuf, sizeof(char *) * 2);
+                if (numRead == -1)
+                    err(EXIT_FAILURE, "Read from file in recover");
+                newBuf[numRead] = '\0';
+                addr = strtol(newBuf, NULL, 16);
+
+                DEBUGPRINT("Addr: %lX\n", addr);
+                DEBUGPRINT("Content at addr: %s\n", addr);
+
+                if (strcmp((char *) req->data.args[1], (char *) addr)){
+                    DEBUGPRINT("DIFFERENT STRS COMPARED: log = %s and curr = %s", addr, req->data.args[1]);
+                    DEBUGPRINT("Entering wrong args for open/stat loop");
+                    lseek(logFd, -(sizeof(char *) * 2 + 4), SEEK_CUR);
+                    advanceTillClose(req, resp, sizes);
+                    continue; // return to normal recv notif loop
+                } else {
+                    DEBUGPRINT("Same STRS compared !!!: %s and %s\n\n\n\n", (char *) req->data.args[1], (char *) addr);
+                    lseek(logFd, -(sizeof(char *) * 2), SEEK_CUR);
+                }
+            }
+
+            if (req->data.nr == SYS_socket) {
+                DEBUGPRINT("Caught in recover %d!", req->data.nr);
+                myDomain = req->data.args[0];
+                DEBUGPRINT("domain caught: %d!", myDomain);
+
+                if (myDomain == AF_NETLINK) {
+                        // cant replay recvmsg :/
+                        DEBUGPRINT("Entered NI trash loop: %s", mypathname);
+                        lseek(logFd, -4, SEEK_CUR);
+                        advanceTillClose(req, resp, sizes);
+                        continue; // return to normal recv notif loop
+                }
+            }
+
+            DEBUGPRINT("req->data.nr = %d\n", req->data.nr);
             switch(req->data.nr) {
                 case SYS_read:
+                    char        *userBuf = (char *) req->data.args[1];
+                    long int    savedBuf;
 
-                    char *userBuf = (char *) req->data.args[1];
-
-                    numRead = read(logFd, newBuf, sizeof(char *) * 2); //   has struct char *
+                    numRead = read(logFd, newBuf, sizeof(char *) * 2); //   has char *
                     if (numRead == -1)
                         err(EXIT_FAILURE, "Read from file in recover");
                     newBuf[numRead] = '\0';
 
-                    long int savedBuf = strtol(newBuf, NULL, 16);
+                    DEBUGPRINT("Read: %s", newBuf);
+                    savedBuf = strtol(newBuf, NULL, 16);
                     //printf("savedbuf: %s\n", (char *) savedBuf);
 
                     numRead = read(logFd, newBuf, sizeof(int) * 2); //      has struct length of str
                     if (numRead == -1)
                         err(EXIT_FAILURE, "Read from file in recover");
                     newBuf[numRead] = '\0';
-
                     int bufLen = strtol(newBuf, NULL, 16);
 
                     memcpy(userBuf, *(curPointer++), sizeof(char) * bufLen);
+                    curCounter++;
+                    DEBUGPRINT("curCounter=%d\n\n\n", curCounter);
 
                     //printf("userbuf: %s\n", userBuf);
                     resp->val = bufLen;
@@ -1007,7 +1450,7 @@ handleNotifications(int notifyFd)
 
                     /* temp way to change to IGNORE again after finishing RECOVER copy */
                     writeCounter++;
-                    printf("Write number %d\n", writeCounter);
+                    printf("Write number %d\n", writeCounter);  // can we delete this?
                     if (writeCounter == 8){     // for md6reflection its 2 !!!
                         phase = IGNORE;
                         printf("\t\tFINISHED RECOVERY, CONTINUING\n");
@@ -1053,11 +1496,14 @@ handleNotifications(int notifyFd)
                     syscallResult = strtol(newBuf, NULL, 16);
                     // Copy the recorded struct stat to the user's buffer
                     memcpy(user_statbuf, *(curPointer++), sizeof(struct stat));
+                    curCounter++;
+                    DEBUGPRINT("curCounter=%d\n\n\n", curCounter);
+
 
                     // For debugging, print some of the stat info
-                    //printf("RECOVER fstat: fd=%d, user_statbuf=%p, original_result=%d\n", 
-                    //    fd, (void*)user_statbuf, syscallResult);
-                    //printf("  st_size=%ld, st_mode=%o\n", user_statbuf->st_size, user_statbuf->st_mode);
+                    DEBUGPRINT("RECOVER fstat: fd=%d, user_statbuf=%p, original_result=%d\n", 
+                        fd, (void*)user_statbuf, syscallResult);
+                    DEBUGPRINT("  st_size=%ld, st_mode=%o\n", user_statbuf->st_size, user_statbuf->st_mode);
                     resp->val = syscallResult;
                     break;
 
@@ -1079,20 +1525,67 @@ handleNotifications(int notifyFd)
                     resp->val = syscallResult;       
                     break;
 
+                case SYS_socket:
+                    socketRecover(req, resp);
+                    break;
+
+                case SYS_connect:
+                    connectRecover(req, resp);
+                    break;
+
+                case SYS_sendto:
+                    sendtoRecover(req, resp);
+                    break;
+                
+                case SYS_recvmsg:
+                    recvmsgRecover(req, resp);
+                    break;
+
+                case SYS_shutdown:
+                    shutdownRecover(req, resp);
+                    break;
+
+                case SYS_bind:
+                    bindRecover(req, resp);
+                    break;
+
+                case SYS_getsockname:
+                    getsocknameRecover(req, resp);
+                    break;
+
+                case SYS_setsockopt:
+                    setsockoptRecover(req, resp);
+                    break;
+
+                case SYS_getsockopt:
+                    getsockoptRecover(req, resp);
+                    break;
+
                 case SYS_openat:
+
+                    int         dirfd = req->data.args[0];
+                    char        *pathname = (char *) req->data.args[1];
+                    int         flags = req->data.args[2];
+                    int         result;
 
                     int resultFd = openat((int) req->data.args[0], (const char *) req->data.args[1], (int) req->data.args[2], (mode_t) req->data.args[3]);
 
+                    result = read(logFd, newBuf, sizeof(char *) * 2);     // pathname not used here
+                    if (result == -1)
+                        err(EXIT_FAILURE, "newfstatat in recover: savedPath");
+                    newBuf[result] = '\0';
+
+                    char *savedPathname = (char *) *(curPointer++);
+                    DEBUGPRINT("savedPathname: %s", savedPathname);
+                    curCounter++;
+                    DEBUGPRINT("curCounter=%d\n\n\n", curCounter);
+
+                    // !!! above using buflog, here using newbuf !! careful
                     numRead = read(logFd, newBuf, sizeof(ssize_t) * 2);
-                    //if (numRead == -1)
-                    //    err(EXIT_FAILURE, "Read from file in recover");
                     newBuf[numRead] = '\0';
 
-                    syscallResult = strtol(newBuf, NULL, 16);
-                    //printf("RECOVER result: %ld\n", syscallResult); // in recover its 6, but in OG process it was given 7
-                    // debug_fd(resultFd, req->pid);  // Use the PID from the request
-                    
-                    //resp->val = resultFd; 
+                    syscallResult = (int32_t)strtol(newBuf, NULL, 16);
+                    DEBUGPRINT("Recover openat: result=%d", syscallResult);
                     resp->val = syscallResult; 
                     break;
 
@@ -1128,9 +1621,8 @@ handleNotifications(int notifyFd)
 
                     continue;                
             }
-            
-            sendNotifResponse(resp);
             numRead = read(logFd, newBuf, 1); // consume \n
+            sendNotifResponse(resp);
             continue;
         }
         

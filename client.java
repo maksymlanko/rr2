@@ -16,18 +16,20 @@ public class client {
         String hostname = "localhost";
         int port = 12345;
 
-        try (Socket socket = new Socket(hostname, port)) {
+        try {
+            Socket socket = new Socket(hostname, port);
             System.out.println("Depois de criar socket");
             InputStream input = socket.getInputStream();
             BufferedReader reader = new BufferedReader(new InputStreamReader(input));
-            String message = reader.readLine();
-            System.out.println("Message from server: " + message);
 
             // Now execute the dynamic method
             client obj = new client();
             Method method = client.class.getMethod(methodName);
             method.invoke(obj);
 
+            String message = reader.readLine();
+            System.out.println("Message from server: " + message);
+            
         } catch (UnknownHostException ex) {
             System.out.println("Server not found: " + ex.getMessage());
         } catch (IOException ex) {

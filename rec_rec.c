@@ -26,6 +26,7 @@
 #include <jni.h>
 #include <netinet/in.h>
 #include <linux/netlink.h>
+#include <linux/limits.h>
 
 
 #define ARRAY_SIZE(arr)  (sizeof(arr) / sizeof((arr)[0]))
@@ -43,6 +44,11 @@ enum executionPhase {
     RECOVER
 };
 
+typedef struct fdInfo{
+    int     status;
+    char    path[PATH_MAX];
+} fdInfo;
+
 int                         macro_test;
 int                         notifyFd;
 int                         logFd;
@@ -50,6 +56,7 @@ char                        bufLog[1024] = {0};
 enum executionPhase         phase;
 void                        **curPointer;
 int                         curCounter = 0;
+fdInfo                      fdArray[56] = {0};
 
 void debugPrint(const char *fmt, ...) {
     char debugBuf[1024];  // Adjust size as needed
@@ -196,7 +203,6 @@ callEntryPoint(char **argv)
     result = run_c(thread, countArgs, argv);
     phase = IGNORE;
     printf("\t\tnative image returned %d\n", result);
-    printf("\t\tRECOVERING...\n");
     graal_tear_down_isolate(thread);
     return result;
  }
@@ -204,9 +210,10 @@ callEntryPoint(char **argv)
 void *
 targetProcess(void *argv[])     // TODO: change to argc+argv struct
 {
-    int    s;
-    pid_t  targetPid;
-    char   **arg;
+    int     s;
+    pid_t   targetPid;
+    char    **arg;
+    int     failed;
 
     arg = (char **) argv;
 
@@ -221,8 +228,11 @@ targetProcess(void *argv[])     // TODO: change to argc+argv struct
 
     installNotifyFilter();
 
-    callEntryPoint(arg);
-    callJavaProgram(1, arg);    // TODO: change to argc+argv struct
+    failed = callEntryPoint(arg);
+    if(failed){
+        printf("\t\tRECOVERING...\n");
+        callJavaProgram(1, arg);    // TODO: change to argc+argv struct
+    }
 
     /* Perform a mkdir() call for each of the command-line arguments */
     /*
@@ -395,6 +405,30 @@ int isFdUsed(int fd) {
     return fcntl(fd, F_GETFD) != -1;
 }
 
+int addFd(int fd, const char* path){
+    fdArray[fd].status = 1;
+    //fdArray[fd].path = path;
+    //strcpy(fdArray[fd].path, path);
+    strncpy(fdArray[fd].path, path, PATH_MAX - 1);
+    fdArray[fd].path[PATH_MAX - 1] = '\0';  // Ensure null-termination
+    return 0;
+}
+
+int sameFd(int fd, const char* path){
+    if (fdArray[fd].status != 1)
+        return -1;
+    if (strcmp(fdArray[fd].path, path) != 0)
+        return -1;
+    return 0;
+}
+
+int removeFd(int fd){
+    fdArray[fd].status = 0;
+    //strcpy(fdArray[fd].path, '\0');
+    fdArray[fd].path[0] = '\0';
+    return 0;
+}
+
 void 
 serializeStat(struct stat some_stat, int fd){
 
@@ -476,6 +510,12 @@ socketRecord(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
     int     protocol = req->data.args[2];
 
     int result = socket(domain, type, protocol);
+    
+    char domain_str[2];
+    domain_str[0] = (char)(domain & 0xFF);
+    domain_str[1] = '\0';
+    addFd(result, domain_str);
+
     resp->error = (result == -1) ? -errno : 0;
     resp->val = result;
 
@@ -774,12 +814,24 @@ socketRecover(struct seccomp_notif *req, struct seccomp_notif_resp *resp) {
     bufLog[numRead] = '\0';
     result = strtol(bufLog, NULL, 16);
 
-    while (isFdUsed(result)){
-        DEBUGPRINT("SOCKET %d ALREADY IN USE !!!", result);
-        result++;
+    char domain_str[2];
+    domain_str[0] = (char)(domain & 0xFF);
+    domain_str[1] = '\0';
+    addFd(result, domain_str);
+
+    if(sameFd(result, domain_str) == 0){
+        DEBUGPRINT("Same fd as from NI!!!\n");
+        resp->val = result;       
     }
+    else{
+        while (isFdUsed(result)){
+            DEBUGPRINT("SOCKET %d ALREADY IN USE !!!", result);
+            result++;
+        }
+        resp->val = result;     
+    }
+
     DEBUGPRINT("Recover socket: domain=%d, type=%d, protocol=%d, result=%d", domain, type, protocol, result);
-    resp->val = result;       
 }
 
 void
@@ -1017,7 +1069,6 @@ static void
 handleNotifications(int notifyFd)
 {
     bool                        pathOK;
-    int                         writeCounter = 0; // TEMPORARY !!!
     char                        path[PATH_MAX];
     // char                        bufLog[1024] = {0};
     void                        **savedPointers;
@@ -1061,7 +1112,7 @@ handleNotifications(int notifyFd)
             resp->id = req->id;
             resp-> flags = 0;
 
-            printf("RECORD syscall nr: %d\n", req->data.nr);
+            DEBUGPRINT("RECORD syscall nr: %d\n", req->data.nr);
             // resp->val = 0;
             // resp->flags = SECCOMP_USER_NOTIF_FLAG_CONTINUE; // emulate for new program, to see which syscalls are used
             // sendNotifResponse(resp);
@@ -1157,10 +1208,11 @@ handleNotifications(int notifyFd)
 
                     resp->error = (result == -1) ? -errno : 0;
                     resp->val = result;
-                    sendNotifResponse(resp);
+                    removeFd(result);
 
                     sprintf(bufLog, "%0*X%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(int) * 2, result);
                     write(logFd, bufLog, strlen(bufLog));
+                    sendNotifResponse(resp);
                     break;
 
                 case SYS_fstat:
@@ -1256,7 +1308,7 @@ handleNotifications(int notifyFd)
                     int responseFd = openat(dirfd, pathname, flags, mode);
                     resp->error = (responseFd == -1) ? -errno : 0;
                     resp->val = responseFd;
-                    sendNotifResponse(resp);
+                    addFd(result, pathname);
 
                     DEBUGPRINT("strlen of pathname = %d", strlen(pathname));
                     char *savedPath = malloc(sizeof(char) * PATH_MAX);
@@ -1271,6 +1323,7 @@ handleNotifications(int notifyFd)
 
                     sprintf(bufLog, "%0*X%0*lX%0*zX\n", sizeof(short) * 2, req->data.nr, sizeof(char *) * 2, savedPath, sizeof(long) * 2, responseFd);
                     write(logFd, bufLog, strlen(bufLog));
+                    sendNotifResponse(resp);
                     break;
 
                 case SYS_newfstatat:
@@ -1447,14 +1500,6 @@ handleNotifications(int notifyFd)
                     break;
 
                 case SYS_write:
-
-                    /* temp way to change to IGNORE again after finishing RECOVER copy */
-                    writeCounter++;
-                    printf("Write number %d\n", writeCounter);  // can we delete this?
-                    if (writeCounter == 8){     // for md6reflection its 2 !!!
-                        phase = IGNORE;
-                        printf("\t\tFINISHED RECOVERY, CONTINUING\n");
-                    }
                     
                     numRead = read(logFd, newBuf, sizeof(ssize_t) * 2);
                     if (numRead == -1)

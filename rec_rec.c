@@ -147,13 +147,16 @@ callJavaProgram(int argc, char **argv)
     JavaVMInitArgs  vm_args;
     JavaVM          *jvm;
     JNIEnv          *env;
-    JavaVMOption    *options = malloc(4 * sizeof(JavaVMOption));
+    JavaVMOption    *options = malloc(5 * sizeof(JavaVMOption));
 
     options[0].optionString = "-Xint";
     options[1].optionString = "-XX:+UseSerialGC";
     options[2].optionString = "-XX:+ReduceSignalUsage";
     options[3].optionString = "-XX:+DisableAttachMechanism";
-    vm_args.nOptions = 4;
+    //options[4].optionString = "-cp .:/usr/share/java/postgresql-jdbc/postgresql-42.5.3.jar";
+    options[4].optionString = "-Djava.class.path=.:/usr/share/java/postgresql-jdbc/postgresql-42.5.3.jar";
+
+    vm_args.nOptions = 5;
     vm_args.options = options;
     vm_args.version = JNI_VERSION_21;
     vm_args.ignoreUnrecognized = JNI_FALSE;
@@ -1342,6 +1345,15 @@ handleNotifications(int notifyFd)
                 case SYS_pread64:       // for JVM
                 case SYS_readlink:
                 case SYS_getcwd:        // is this one supposed to be here..?
+                // for driver
+                // case SYS_getuid:
+                // case SYS_fcntl:
+                // case SYS_poll:
+                // for server
+                case SYS_listen:
+                case SYS_accept:
+                case SYS_fcntl:
+
                     DEBUGPRINT("SKIPPED syscall nr: %d\n", req->data.nr);
                     resp->error = 0;
                     resp->val = 0;

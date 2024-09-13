@@ -36,6 +36,7 @@ public class WrapperExample {
 
             CCharPointer progPointer = argv.read(0);
             String progName = CTypeConversion.toJavaString(progPointer);
+            //System.out.println("progName: " + progName);
 
             for (int i = 1; i < argc; i++) {
                 CCharPointer argPointer = argv.read(i);
@@ -49,6 +50,12 @@ public class WrapperExample {
                 case "client":
                     client.main(javaArgs);
                     break;
+                case "Example":
+                    Example.main(javaArgs);
+                    break;
+                case "server":
+                    server.main(javaArgs);
+
                 default:
                     System.err.println("Unknown class name: " + progName);
                     break;

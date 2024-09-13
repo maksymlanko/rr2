@@ -8,13 +8,6 @@ import java.security.NoSuchAlgorithmException;
 public class md6reflection {
 
     public static void main(String[] args) {
-		
-        /*
-	    System.out.println("Command-line arguments:");
-	    for (String arg : args) {
-      	    	System.out.println(arg);
-            }
-        */
        
 	    if (args.length < 1) {
             System.out.println("Please provide the name of the method to execute as a command-line argument.");
@@ -35,13 +28,6 @@ public class md6reflection {
             e.printStackTrace();
             return; // Exit if there's an error reading the file
         }
-
-    /*
-	System.out.println("Contents of " + filePath + ":");    
-    byte[] bytes = new String(fileBytes).getBytes();
-    for(byte b:bytes)
-        System.out.println(b);
-    */
 
 	System.out.println(new String(fileBytes));
         try {

@@ -38,7 +38,7 @@ public class md6reflection {
             // System.out.println("Method not found: " + methodName);
             throw new RuntimeException(e);
         } catch (IllegalAccessException | InvocationTargetException e) {
-            e.printStackTrace();
+            //e.printStackTrace();
             throw new RuntimeException(e);
         }
 

@@ -233,7 +233,7 @@ targetProcess(void *argv[])     // TODO: change to argc+argv struct
 
     failed = callEntryPoint(arg);
     if (failed) {
-        //printf("\t\tRECOVERING...\n"); // remove this for transparent recovery
+        // printf("\t\tRECOVERING...\n"); // remove this for transparent recovery
         callJavaProgram(1, arg);    // TODO: change to argc+argv struct
     }
 

@@ -24,10 +24,11 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     //printf("antes\n");
-    int result = run_c(thread, argv[1]);
+    int result = run_c(thread, argc-1, argv+1);
     //printf("Return was %d\n", result);
     if (result != 0){
-        printf("Failed\n");
+        return -1;
+        //printf("Failed\n");
         //callJavaProgram(argc, argv);
         //char *command[] = {"java", "HelloWorld", NULL};
         //if(execvp("java", command) != 0){

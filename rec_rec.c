@@ -205,7 +205,7 @@ callEntryPoint(char **argv)
     phase = RECORD;
     result = run_c(thread, countArgs, argv);
     phase = IGNORE;
-    printf("\t\tnative image returned %d\n", result);
+    // printf("\t\tnative image returned %d\n", result);
     graal_tear_down_isolate(thread);
     return result;
  }
@@ -232,8 +232,8 @@ targetProcess(void *argv[])     // TODO: change to argc+argv struct
     installNotifyFilter();
 
     failed = callEntryPoint(arg);
-    if(failed){
-        printf("\t\tRECOVERING...\n");
+    if (failed) {
+        //printf("\t\tRECOVERING...\n"); // remove this for transparent recovery
         callJavaProgram(1, arg);    // TODO: change to argc+argv struct
     }
 

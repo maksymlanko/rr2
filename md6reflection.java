@@ -29,13 +29,13 @@ public class md6reflection {
             return; // Exit if there's an error reading the file
         }
 
-	System.out.println(new String(fileBytes));
+	    System.out.println(new String(fileBytes));
         try {
             md6reflection obj = new md6reflection();
             Method method = md6reflection.class.getMethod(methodName, new Class<?>[0]);
             method.invoke(obj);
         } catch (NoSuchMethodException e) {
-            System.out.println("Method not found: " + methodName);
+            // System.out.println("Method not found: " + methodName);
             throw new RuntimeException(e);
         } catch (IllegalAccessException | InvocationTargetException e) {
             e.printStackTrace();

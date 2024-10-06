@@ -4,15 +4,17 @@
 #include <time.h> 
 #include <err.h>
 #include <errno.h>
-#include <getopt.h>
+#include "libwrapperexample.h"
 
 void callJavaProgram(int argc, char **argv);
-//void callEntryPoint(char **argv)
+void callEntryPoint(char **argv);
 
 int main(int argc, char **argv) {
-    callJavaProgram(argc, &argv[optind]);
+    callEntryPoint(argv);
+    callJavaProgram(argc, argv);
     return 0;
 }
+
 
 void
 callJavaProgram(int argc, char **argv)
@@ -45,8 +47,9 @@ callJavaProgram(int argc, char **argv)
         err(EXIT_FAILURE, "JNI_CreateJavaVM %d", rc);
     free(options);
 
+    //printf("argv[1]: %s", argv[1]);
 
-    jclass cls = (*env)->FindClass(env, argv[0]);
+    jclass cls = (*env)->FindClass(env, argv[1]);
     if (cls == NULL)
         err(EXIT_FAILURE, "FindClass");
 
@@ -61,4 +64,23 @@ callJavaProgram(int argc, char **argv)
     }
     (*env)->CallStaticVoidMethod(env, cls, mid, arr);
     (*jvm)->DestroyJavaVM(jvm);
+    //return;
 }
+
+void callEntryPoint(char **argv)
+{
+    int                     result;
+    graal_isolate_t         *isolate;
+    graal_isolatethread_t   *thread;
+
+    if (graal_create_isolate(NULL, &isolate, &thread) != 0)
+        err(EXIT_FAILURE, "graal_create_isolate");
+
+    int countArgs = 1;                  // TEMPORARY WAY TO GET ARGC
+    while (argv[countArgs] != NULL) {   // TODO: GET ARGC+ARGV AS ARGUMENT FROM THREAD LATER
+        countArgs++;
+    }
+
+    result = run_c(thread, countArgs, &argv[1]);
+    graal_tear_down_isolate(thread);
+ }

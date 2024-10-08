@@ -203,6 +203,12 @@ callEntryPoint(char **argv)
     }
 
     phase = RECORD;
+
+    if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0))
+        err(EXIT_FAILURE, "prctl");
+
+    installNotifyFilter();
+
     result = run_c(thread, countArgs, argv);
     phase = IGNORE;
     // printf("\t\tnative image returned %d\n", result);
@@ -226,12 +232,14 @@ targetProcess(void *argv[])     // TODO: change to argc+argv struct
 
     /* Install seccomp filter(s) */
 
-    if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0))
-        err(EXIT_FAILURE, "prctl");
 
-    installNotifyFilter();
 
     failed = callEntryPoint(arg);
+
+    #ifdef NI_ONLY
+        exit(failed);
+    #endif
+
     if (failed) {
         // printf("\t\tRECOVERING...\n"); // remove this for transparent recovery
         callJavaProgram(1, arg);    // TODO: change to argc+argv struct
@@ -1069,7 +1077,7 @@ advanceTillClose(struct seccomp_notif *req, struct seccomp_notif_resp *resp, str
     descriptor, 'notifyFd'. */
 
 static void
-handleNotifications(int notifyFd)
+handleNotifications()
 {
     bool                        pathOK;
     char                        path[PATH_MAX];
@@ -1083,11 +1091,14 @@ handleNotifications(int notifyFd)
     char                        *mypathname;
     int                         myDomain;
 
+
     allocSeccompNotifBuffers(&req, &resp, &sizes);
     savedPointers = malloc(sizeof(void *) * 100);
     curPointer = savedPointers;
     logFd = open("execution.log", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH); // TODO: also log targetProcess prints?
     macro_test = open("logfile", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+
+    while (notifyFd == -1)
 
     if (logFd == -1)
         err(EXIT_FAILURE, "Failed to open logFd");
@@ -1868,11 +1879,12 @@ handleNotifications(int notifyFd)
 static void
 supervisor()
 {   
-    while (notifyFd == -1)
-        sched_yield();
+    //while (notifyFd == -1)
+        //sched_yield();
         //err(EXIT_FAILURE, "recvfd");
 
-    handleNotifications(notifyFd);
+    //handleNotifications(notifyFd);
+    handleNotifications();
 }
 
 int

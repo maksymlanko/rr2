@@ -52,6 +52,9 @@ typedef struct fdInfo{
 int                         macro_test;
 int                         notifyFd;
 int                         logFd;
+char                        *tempLog;
+int                         logIndex = 0;
+int                         logMax = 0;
 char                        bufLog[1024] = {0};
 enum executionPhase         phase;
 void                        **curPointer;
@@ -241,7 +244,7 @@ targetProcess(void *argv[])     // TODO: change to argc+argv struct
     #endif
 
     if (failed) {
-        // printf("\t\tRECOVERING...\n"); // remove this for transparent recovery
+         printf("\t\tRECOVERING...\n"); // remove this for transparent recovery
         callJavaProgram(1, arg);    // TODO: change to argc+argv struct
     }
 
@@ -1095,8 +1098,10 @@ handleNotifications()
     allocSeccompNotifBuffers(&req, &resp, &sizes);
     savedPointers = malloc(sizeof(void *) * 100);
     curPointer = savedPointers;
-    logFd = open("execution.log", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH); // TODO: also log targetProcess prints?
-    macro_test = open("logfile", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+
+    tempLog = calloc(1024, 0);
+    //logFd = open("execution.log", O_RDWR | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH); // TODO: also log targetProcess prints?
+    //macro_test = open("logfile", O_WRONLY | O_CREAT | O_TRUNC, 0644);
 
     while (notifyFd == -1)
 
@@ -1193,7 +1198,8 @@ handleNotifications()
 
                     //DEBUGPRINT("%0*X%0*lx%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(char *) * 2, savedBuf, sizeof(int) * 2, bytesRead);
                     sprintf(bufLog, "%0*X%0*lx%0*X\n", sizeof(short) * 2, req->data.nr, sizeof(char *) * 2, savedBuf, sizeof(int) * 2, bytesRead);
-                    write(logFd, bufLog, strlen(bufLog));
+                    //write(logFd, bufLog, strlen(bufLog));
+
                     break;
 
                 case SYS_write:
@@ -1207,11 +1213,18 @@ handleNotifications()
 
                     resp->error = (bytesWritten == -1) ? -errno : 0;
                     resp->val = bytesWritten;
-                    sendNotifResponse(resp);
 
                     //DEBUGPRINT("%0*X%0*zX\n", sizeof(short) * 2, req->data.nr, sizeof(ssize_t) * 2, bytesWritten);
                     sprintf(bufLog, "%0*X%0*zX\n", sizeof(short) * 2, req->data.nr, sizeof(ssize_t) * 2, bytesWritten);
-                    write(logFd, bufLog, strlen(bufLog));
+                    //write(logFd, bufLog, strlen(bufLog));
+                    memcpy(tempLog+logIndex, bufLog, strlen(bufLog));
+                    logIndex += strlen(bufLog);
+                    
+                    //printf("Received sys_buf: %s\n", sys_buf);
+                    // printf("%s", tempLog);
+                    // printf("logIndex=%d\n", logIndex);
+
+                    sendNotifResponse(resp);
                     break;
 
                 case SYS_close:
@@ -1390,7 +1403,9 @@ handleNotifications()
             continue;
         } else if (phase == RESTART) {
             phase = RECOVER;
-            off_t lseekResult = lseek(logFd, 0, SEEK_SET); // add error checking
+            logMax = logIndex;
+            logIndex = 0;
+            //off_t lseekResult = lseek(logFd, 0, SEEK_SET); // add error checking
             curPointer = savedPointers;
             curCounter = 0;
         } 
@@ -1405,13 +1420,22 @@ handleNotifications()
             resp->id = req->id;
             resp-> flags = 0;
             resp->error = 0;
+            //printf("RECEIVED SYSCALL: %d\n", req->data.nr);
 
-            numRead = read(logFd, newBuf, sizeof(short) * 2); // read syscall nr
-            if (numRead == -1)
-                err(EXIT_FAILURE, "Read from file in recover");
-            newBuf[numRead] = '\0';
+            //numRead = read(logFd, newBuf, sizeof(short) * 2); // read syscall nr
+            memcpy(newBuf, tempLog + logIndex, sizeof(short) * 2);
+            logIndex += sizeof(short) * 2;
+            newBuf[sizeof(short) * 2] = '\0';
+            //printf("syscall nr: %s\n", newBuf);
+            
 
-            if (numRead == 0){
+
+            // if (numRead == -1)
+            //     err(EXIT_FAILURE, "Read from file in recover");
+            // newBuf[sizeof(short) * 2] = '\0';
+
+
+            if (logIndex >= logMax){
                 DEBUGPRINT("END OF FILE !!!!!!");
                 phase = IGNORE;
                 skipSyscall(req, resp);
@@ -1419,7 +1443,16 @@ handleNotifications()
                 continue;
             }
 
+            // if (numRead == 0){
+            //     DEBUGPRINT("END OF FILE !!!!!!");
+            //     phase = IGNORE;
+            //     skipSyscall(req, resp);
+            //     //exit(0);
+            //     continue;
+            // }
+
             syscallNumber = strtol(newBuf, NULL, 16);
+            //printf("SYSCALLS: log=%d curr=%d\n", syscallNumber, req->data.nr);
             DEBUGPRINT("SYSCALLS: log=%d curr=%d", syscallNumber, req->data.nr);
 
             if (req->data.nr != syscallNumber) {
@@ -1524,16 +1557,29 @@ handleNotifications()
 
                 case SYS_write:
                     
-                    numRead = read(logFd, newBuf, sizeof(ssize_t) * 2);
-                    if (numRead == -1)
-                        err(EXIT_FAILURE, "Read from file in recover");
+                    //numRead = read(logFd, newBuf, sizeof(ssize_t) * 2);
 
-                    newBuf[numRead] = '\0';
+                    // printf("Entered sys_write\n");
+                    // printf("logIndex=%d\n", logIndex);
+
+
+                    memcpy(newBuf, tempLog + logIndex, sizeof(ssize_t) * 2);
+                    logIndex += sizeof(ssize_t) * 2;
+                    // printf("%s\n", newBuf);
+                    // printf("logIndex=%d\n", logIndex);
+
+                    // if (numRead == -1)
+                    //     err(EXIT_FAILURE, "Read from file in recover");
+
+                    newBuf[sizeof(ssize_t) * 2] = '\0';
                     //printf("RECOVER write: %s\n", newBuf);
                     syscallResult = strtol(newBuf, NULL, 16);
+
+                    // printf("result: %d\n", syscallResult);
                     
                     //printf("RECOVER write: %zd\n", syscallResult);
                     resp->val = syscallResult;
+
                     break;
                     
                 case SYS_close:
@@ -1689,7 +1735,8 @@ handleNotifications()
 
                     continue;                
             }
-            numRead = read(logFd, newBuf, 1); // consume \n
+            logIndex += 1;
+            //numRead = read(logFd, newBuf, 1); // consume \n
             sendNotifResponse(resp);
             continue;
         }

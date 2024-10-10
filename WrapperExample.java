@@ -55,6 +55,16 @@ public class WrapperExample {
                     break;
                 case "server":
                     server.main(javaArgs);
+                    break;
+                case "multiple":
+                    multiple.main(javaArgs);
+                    break;
+                case "longExample":
+                    longExample.main(javaArgs);
+                    break;
+                case "md6":
+                    md6.main(javaArgs);
+                    break;
 
                 default:
                     System.err.println("Unknown class name: " + progName);
@@ -79,7 +89,7 @@ public class WrapperExample {
                 //System.out.println("NoSuchMethodException caught in wrapper: " + e.getCause().getMessage());
             }
             //e.printStackTrace();
-            return -1;
+            return -69;
         }
         return 0;
     }

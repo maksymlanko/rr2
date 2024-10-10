@@ -149,14 +149,12 @@ callJavaProgram(int argc, char **argv)
     JNIEnv          *env;
     JavaVMOption    *options = malloc(5 * sizeof(JavaVMOption));
 
-    options[0].optionString = "-Xint";
-    options[1].optionString = "-XX:+UseSerialGC";
-    options[2].optionString = "-XX:+ReduceSignalUsage";
-    options[3].optionString = "-XX:+DisableAttachMechanism";
-    //options[4].optionString = "-cp .:/usr/share/java/postgresql-jdbc/postgresql-42.5.3.jar";
-    options[4].optionString = "-Djava.class.path=.:/usr/share/java/postgresql-jdbc/postgresql-42.5.3.jar";
+    vm_args.nOptions = 0;
+    while (argv[vm_args.nOptions][0] == '-'){
+        options[vm_args.nOptions].optionString = argv[vm_args.nOptions];
+        vm_args.nOptions++;
+    }
 
-    vm_args.nOptions = 5;
     vm_args.options = options;
     vm_args.version = JNI_VERSION_21;
     vm_args.ignoreUnrecognized = JNI_FALSE;
@@ -168,7 +166,7 @@ callJavaProgram(int argc, char **argv)
 
     DEBUGPRINT("argv[0] in JVM: %s", argv[0]);
 
-    jclass cls = (*env)->FindClass(env, argv[0]);
+    jclass cls = (*env)->FindClass(env, argv[vm_args.nOptions]);
     if (cls == NULL)
         err(EXIT_FAILURE, "FindClass");
 
@@ -176,10 +174,10 @@ callJavaProgram(int argc, char **argv)
     if (mid == NULL)
         err(EXIT_FAILURE, "main(String[]) not found");
 
-    jobjectArray arr = (*env)->NewObjectArray(env, countArgs - 1, (*env)->FindClass(env, "java/lang/String"), NULL);
-    for (int i = 1; i < countArgs; i++) {
+    jobjectArray arr = (*env)->NewObjectArray(env, countArgs - 1 - vm_args.nOptions, (*env)->FindClass(env, "java/lang/String"), NULL);
+    for (int i = 1 + vm_args.nOptions; i < countArgs; i++) {
         //printf("JVM argv[%d]: %s", i, argv[i]);
-        (*env)->SetObjectArrayElement(env, arr, i-1, (*env)->NewStringUTF(env, argv[i]));
+        (*env)->SetObjectArrayElement(env, arr, i-1-vm_args.nOptions, (*env)->NewStringUTF(env, argv[i]));
     }
     phase = RESTART; // reset to beginning of log file and start emulating syscalls
     (*env)->CallStaticVoidMethod(env, cls, mid, arr);
@@ -190,6 +188,7 @@ callJavaProgram(int argc, char **argv)
 static int
 callEntryPoint(char **argv)
 {
+    int                     options = 0;
     int                     result;
     graal_isolate_t         *isolate;
     graal_isolatethread_t   *thread;
@@ -202,6 +201,9 @@ callEntryPoint(char **argv)
         countArgs++;
     }
 
+    while (argv[options][0] == '-'){
+        options++;
+    }
     phase = RECORD;
 
     if (prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0))
@@ -209,7 +211,7 @@ callEntryPoint(char **argv)
 
     installNotifyFilter();
 
-    result = run_c(thread, countArgs, argv);
+    result = run_c(thread, countArgs, argv+options);
     phase = IGNORE;
     // printf("\t\tnative image returned %d\n", result);
     graal_tear_down_isolate(thread);

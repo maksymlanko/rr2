@@ -147,12 +147,13 @@ callJavaProgram(int argc, char **argv)
     JavaVMInitArgs  vm_args;
     JavaVM          *jvm;
     JNIEnv          *env;
-    JavaVMOption    *options = malloc(5 * sizeof(JavaVMOption));
+    JavaVMOption    *options = malloc(1 * sizeof(JavaVMOption));
 
     vm_args.nOptions = 0;
-    while (argv[vm_args.nOptions][0] == '-'){
-        options[vm_args.nOptions].optionString = argv[vm_args.nOptions];
-        vm_args.nOptions++;
+    
+    if (argv[0][0] == '-'){
+        options[0].optionString = argv[0];
+        vm_args.nOptions = 1;
     }
 
     vm_args.options = options;
@@ -166,7 +167,7 @@ callJavaProgram(int argc, char **argv)
 
     DEBUGPRINT("argv[0] in JVM: %s", argv[0]);
 
-    jclass cls = (*env)->FindClass(env, argv[vm_args.nOptions]);
+    jclass cls = (*env)->FindClass(env, argv[0]);
     if (cls == NULL)
         err(EXIT_FAILURE, "FindClass");
 
@@ -174,10 +175,10 @@ callJavaProgram(int argc, char **argv)
     if (mid == NULL)
         err(EXIT_FAILURE, "main(String[]) not found");
 
-    jobjectArray arr = (*env)->NewObjectArray(env, countArgs - 1 - vm_args.nOptions, (*env)->FindClass(env, "java/lang/String"), NULL);
-    for (int i = 1 + vm_args.nOptions; i < countArgs; i++) {
+    jobjectArray arr = (*env)->NewObjectArray(env, countArgs - 1, (*env)->FindClass(env, "java/lang/String"), NULL);
+    for (int i = 1; i < countArgs; i++) {
         //printf("JVM argv[%d]: %s", i, argv[i]);
-        (*env)->SetObjectArrayElement(env, arr, i-1-vm_args.nOptions, (*env)->NewStringUTF(env, argv[i]));
+        (*env)->SetObjectArrayElement(env, arr, i-1, (*env)->NewStringUTF(env, argv[i]));
     }
     phase = RESTART; // reset to beginning of log file and start emulating syscalls
     (*env)->CallStaticVoidMethod(env, cls, mid, arr);
@@ -188,10 +189,10 @@ callJavaProgram(int argc, char **argv)
 static int
 callEntryPoint(char **argv)
 {
-    int                     options = 0;
     int                     result;
     graal_isolate_t         *isolate;
     graal_isolatethread_t   *thread;
+    int                     options = 0;
 
     if (graal_create_isolate(NULL, &isolate, &thread) != 0)
         err(EXIT_FAILURE, "graal_create_isolate");
@@ -201,7 +202,7 @@ callEntryPoint(char **argv)
         countArgs++;
     }
 
-    while (argv[options][0] == '-'){
+    if (argv[0][0] == '-'){
         options++;
     }
     phase = RECORD;

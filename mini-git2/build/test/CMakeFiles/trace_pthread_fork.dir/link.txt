@@ -1,1 +1,0 @@
-/usr/bin/cc -g -rdynamic CMakeFiles/trace_pthread_fork.dir/trace_pthread_fork.c.o -o trace_pthread_fork  -lpthread 

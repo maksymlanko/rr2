@@ -1,0 +1,4 @@
+Command executed: java -Xint -XX:+UseSerialGC -XX:+ReduceSignalUsage -XX:+DisableAttachMechanism md6reflection dynamicMethod
+Total runs attempted: 1000
+Valid runs completed: 1000
+Average real time: .060907 seconds

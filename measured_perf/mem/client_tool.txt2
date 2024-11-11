@@ -1,0 +1,4 @@
+Command executed: ./rec_rec client dynamicMethod
+Runs completed: 1000
+Average real time: .087 seconds
+Average max resident size: 56289 KB

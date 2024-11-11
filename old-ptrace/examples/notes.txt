@@ -1,0 +1,3 @@
+gcc seccomp.c -lseccomp
+sudo setcap 'cap_sys_admin+ep' check_seccomp
+or instead add prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0) 

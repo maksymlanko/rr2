@@ -1,0 +1,4 @@
+Command executed: java -XX:+ReduceSignalUsage -XX:+DisableAttachMechanism md6reflection dynamicMethod
+Runs completed: 1000
+Average real time: .133 seconds
+Average max resident size: 47824 KB

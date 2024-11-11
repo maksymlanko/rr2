@@ -10,9 +10,7 @@ extern "C" {
 
 int run_main(int argc, char** argv);
 
-int filter_env(graal_isolatethread_t*, char*);
-
-int run_c(graal_isolatethread_t*, char*);
+int run_c(graal_isolatethread_t*, int, char**);
 
 #if defined(__cplusplus)
 }

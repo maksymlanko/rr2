@@ -65,6 +65,9 @@ public class WrapperExample {
                 case "md6":
                     md6.main(javaArgs);
                     break;
+                case "md6end":
+                    md6end.main(javaArgs);
+                    break;
 
                 default:
                     System.err.println("Unknown class name: " + progName);

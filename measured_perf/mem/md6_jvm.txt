@@ -1,0 +1,4 @@
+Command executed: java md6
+Runs completed: 1000
+Average real time: .106 seconds
+Average max resident size: 72688 KB

@@ -1,1 +1,0 @@
-/usr/bin/cc -g -rdynamic CMakeFiles/trace_descendants.dir/trace_descendants.c.o -o trace_descendants 

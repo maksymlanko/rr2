@@ -1,0 +1,4 @@
+Command executed: ./rec_rec md6reflection dynamicMethod
+Runs completed: 1000
+Average real time: .132 seconds
+Average max resident size: 54582 KB

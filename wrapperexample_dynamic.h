@@ -10,9 +10,7 @@ extern "C" {
 
 typedef int (*run_main_fn_t)(int argc, char** argv);
 
-typedef int (*filter_env_fn_t)(graal_isolatethread_t*, char*);
-
-typedef void (*run_c_fn_t)(graal_isolatethread_t*, char*);
+typedef int (*run_c_fn_t)(graal_isolatethread_t*, char*);
 
 #if defined(__cplusplus)
 }

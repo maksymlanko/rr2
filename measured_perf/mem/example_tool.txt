@@ -1,0 +1,4 @@
+Command executed: ./rec_rec -Djava.class.path=.:/usr/share/java/postgresql-jdbc/postgresql-42.5.3.jar Example
+Runs completed: 1000
+Average real time: .194 seconds
+Average max resident size: 68712 KB

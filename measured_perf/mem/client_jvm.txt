@@ -1,0 +1,4 @@
+Command executed: java -XX:+ReduceSignalUsage -XX:+DisableAttachMechanism client dynamicMethod
+Runs completed: 1000
+Average real time: .073 seconds
+Average max resident size: 48683 KB

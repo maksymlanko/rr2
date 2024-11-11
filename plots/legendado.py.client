@@ -1,0 +1,114 @@
+import matplotlib.pyplot as plt
+import numpy as np
+from matplotlib.backends.backend_pdf import PdfPages
+
+# Data for the times and memory
+commands = ['Insecure Restart', 'rec_rec', 'JVM']
+average_times_sec = [0.109041, 0.116573, 0.103878]  # Total execution times (in seconds)
+memory_usage_kb = [47818, 54582, 47824]  # Max resident size (in KB)
+
+# Convert times to milliseconds (ms) and memory to megabytes (MB)
+average_times_ms = [t * 1000 for t in average_times_sec]  # seconds to milliseconds
+memory_usage_mb = [m / 1024 for m in memory_usage_kb]  # kilobytes to megabytes
+
+# Times for the new stacked bar chart
+bin_time = 0.014632  # Average real time for client_bin command
+restart_time = 0.109041  # Average real time for Insecure Restart
+ni_time = 0.022805  # Average real time for ni_only command
+tool_time = 0.116573  # Average real time for rec_rec command
+jvm_time = 0.103878  # Average real time for JVM
+
+# Differences for stacking
+restart_bin_diff = restart_time - bin_time  # Difference for Insecure Restart
+tool_ni_diff = tool_time - ni_time  # Difference for rec_rec
+
+# Set up the plot style
+plt.style.use('ggplot')
+
+# Function to add labels on the bars
+def add_labels(ax, rects, unit, inside=False):
+    for rect in rects:
+        height = rect.get_height()
+        if inside:
+            ax.annotate(f'{height:.1f} {unit}',
+                        xy=(rect.get_x() + rect.get_width() / 2, height / 2),  # Center in the bar
+                        ha='center', va='center', color='black', fontsize=14)  # Black text for visibility
+        else:
+            ax.annotate(f'{height:.1f} {unit}',
+                        xy=(rect.get_x() + rect.get_width() / 2, height),
+                        xytext=(0, 3),  # 3 points vertical offset
+                        textcoords="offset points",
+                        ha='center', va='bottom', fontsize=14)
+
+# Define colors based on the characteristics of each label
+colors = ['#FFD700', '#FFB74D', '#6D6D6D']  # Yellow for Insecure Restart, Orange for rec_rec, Gray for JVM
+dark_gray = '#A9A9A9'  # Darker gray for better visibility
+strong_red = '#FF4D4D'  # Stronger red for better readability
+
+# Create a PDF to save the figures
+with PdfPages('comparison_graphs.pdf') as pdf:
+    
+    # First figure for execution times
+    fig1, ax1 = plt.subplots(figsize=(10, 6))
+    width = 0.35
+    x = np.arange(len(commands))
+    rects1 = ax1.bar(x, average_times_ms, width, color=colors, label='Execution Time')
+
+    ax1.set_xlabel('System', fontsize=16)  # Set to 'System' with larger font size
+    ax1.set_ylabel('Execution Time (ms)', fontsize=16)
+    ax1.set_xticks(x)
+    ax1.set_xticklabels(commands, fontsize=14)
+    add_labels(ax1, rects1, 'ms')
+    pdf.savefig(fig1)  # Save the first figure to the PDF
+    plt.close(fig1)    # Close the figure to free up memory
+
+    # Second figure for memory usage
+    fig2, ax2 = plt.subplots(figsize=(10, 6))
+    rects2 = ax2.bar(x, memory_usage_mb, width, color=colors, label='Memory Usage')
+
+    ax2.set_xlabel('System', fontsize=16)  # Set to 'System' with larger font size
+    ax2.set_ylabel('Max Memory Consumption (MB)', fontsize=16)
+    ax2.set_xticks(x)
+    ax2.set_xticklabels(commands, fontsize=14)
+    add_labels(ax2, rects2, 'MB')
+    pdf.savefig(fig2)  # Save the second figure to the PDF
+    plt.close(fig2)    # Close the figure to free up memory
+
+    # Stacked bar for execution breakdown (Insecure Restart and rec_rec as stacked, JVM as normal)
+    fig3, ax3 = plt.subplots(figsize=(10, 6))
+    width = 0.35
+    x = np.arange(3)  # For three bars (Insecure Restart, rec_rec, JVM)
+
+    # Plot stacked bars
+    rects3_1 = ax3.bar(x[0], bin_time * 1000, width, color=strong_red)  # Bin time below Restart
+    rects3_2 = ax3.bar(x[0], restart_bin_diff * 1000, width, bottom=bin_time * 1000, color=dark_gray)  # Restart
+
+    rects3_3 = ax3.bar(x[1], ni_time * 1000, width, color=strong_red, label='Native Image')  # ni_time below rec_rec
+    rects3_4 = ax3.bar(x[1], tool_ni_diff * 1000, width, bottom=ni_time * 1000, color=dark_gray)  # rec_rec
+
+    rects3_5 = ax3.bar(x[2], jvm_time * 1000, width, color='#6D6D6D', label='JVM')  # JVM
+
+    ax3.set_xlabel('System', fontsize=16)  # Set to 'System' with larger font size
+    ax3.set_ylabel('Execution Time (ms)', fontsize=16)
+    ax3.set_xticks(x)
+    ax3.set_xticklabels(['Insecure Restart', 'rec_rec', 'JVM'], fontsize=14)
+
+    # Adding labels
+    add_labels(ax3, rects3_1, 'ms', inside=True)  # Labels inside the red bars for Bin time
+    add_labels(ax3, rects3_2, 'ms')  # Restart time label
+    add_labels(ax3, rects3_3, 'ms', inside=True)  # Labels inside the red bars for ni_time
+    add_labels(ax3, rects3_4, 'ms')  # rec_rec label
+    add_labels(ax3, rects3_5, 'ms')  # JVM label
+
+    # Adjust y-axis to make room for the legend
+    ax3.set_ylim(0, ax3.get_ylim()[1] * 1.1)  # Scale slightly to fit the legend
+
+    # Place the legend inside the plot area
+    ax3.legend(loc='upper left', fontsize=14)  # Changed position to avoid overlap
+
+    pdf.savefig(fig3)  # Save the third figure with a tight bounding box
+    plt.close(fig3)    # Close the figure to free up memory
+
+# Notify user
+print("PDF 'comparison_graphs.pdf' with updated formatting created successfully!")
+

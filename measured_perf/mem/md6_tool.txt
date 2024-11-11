@@ -1,0 +1,4 @@
+Command executed: ./rec_rec md6
+Runs completed: 1000
+Average real time: .009 seconds
+Average max resident size: 24773 KB

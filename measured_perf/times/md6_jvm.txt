@@ -1,0 +1,4 @@
+Command executed: java md6
+Total runs attempted: 1000
+Valid runs completed: 1000
+Average real time: .106375 seconds
